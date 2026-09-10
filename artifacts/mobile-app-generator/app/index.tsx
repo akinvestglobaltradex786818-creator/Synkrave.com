@@ -23,15 +23,80 @@ const starterPrompts = [
   'A recipe planner for busy weeks',
 ];
 
-const generatedSnippet = `import { View, Text } from 'react-native';
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 
-export default function App() {
-  return (
-    <View>
-      <Text>Welcome to your new app</Text>
-    </View>
-  );
-}`;
+const mockGenerateApp = (idea: string): Promise<string> =>
+  new Promise((resolve) => {
+    setTimeout(() => {
+      const safeIdea = escapeHtml(
+        idea.replace(/\s+/g, ' ').trim().slice(0, 90) ||
+          'A simple generated text card',
+      );
+
+      resolve(`<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Generated App</title>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        display: grid;
+        min-height: 100vh;
+        place-items: center;
+        margin: 0;
+        padding: 24px;
+        background: #0b1119;
+        color: #f4f7ff;
+        font-family: Inter, system-ui, sans-serif;
+      }
+      .card {
+        width: min(100%, 420px);
+        padding: 28px;
+        border: 1px solid #26313f;
+        border-radius: 20px;
+        background: #11151d;
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
+      }
+      .eyebrow {
+        margin: 0 0 10px;
+        color: #6ee7f9;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      h1 { margin: 0 0 10px; font-size: 26px; }
+      p { margin: 0 0 22px; color: #a9b5c5; line-height: 1.6; }
+      button {
+        border: 0;
+        border-radius: 10px;
+        padding: 12px 18px;
+        background: #6ee7f9;
+        color: #071016;
+        cursor: pointer;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <p class="eyebrow">Generated starter</p>
+      <h1>Your first screen is ready</h1>
+      <p>${safeIdea}</p>
+      <button type="button">Get started</button>
+    </main>
+  </body>
+</html>`);
+    }, 3000);
+  });
 
 export default function HomeScreen() {
   const colors = useColors();
@@ -43,7 +108,7 @@ export default function HomeScreen() {
   const [generatedCode, setGeneratedCode] = useState<string>('');
   const [error, setError] = useState<string>('');
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     Keyboard.dismiss();
     if (!prompt.trim()) {
       setError('Add a short description to get started.');
@@ -56,11 +121,10 @@ export default function HomeScreen() {
     setGeneratedCode('');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    setTimeout(() => {
-      setIsGenerating(false);
-      setGeneratedCode(generatedSnippet);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }, 900);
+    const generatedHtml = await mockGenerateApp(prompt);
+    setIsGenerating(false);
+    setGeneratedCode(generatedHtml);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
   const handleVoicePress = () => {
