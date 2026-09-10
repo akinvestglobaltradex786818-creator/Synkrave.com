@@ -31,21 +31,18 @@ const escapeHtml = (value: string) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 
-const mockGenerateApp = (idea: string): Promise<string> =>
+const localGenerateApp = (idea: string): Promise<string> =>
   new Promise((resolve) => {
-    setTimeout(() => {
-      const safeIdea = escapeHtml(
-        idea.replace(/\s+/g, ' ').trim().slice(0, 90) ||
-          'A simple generated text card',
-      );
+    setTimeout(() => resolve(buildLocalApp(idea)), 3000);
+  });
 
-      resolve(`<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Generated App</title>
-    <style>
+function buildLocalApp(idea: string): string {
+  const normalizedIdea = idea.toLowerCase();
+  const safeIdea = escapeHtml(
+    idea.replace(/\s+/g, ' ').trim().slice(0, 90) ||
+      'A simple generated text card',
+  );
+  const sharedStyles = `
       * { box-sizing: border-box; }
       body {
         display: grid;
@@ -57,8 +54,8 @@ const mockGenerateApp = (idea: string): Promise<string> =>
         color: #f4f7ff;
         font-family: Inter, system-ui, sans-serif;
       }
-      .card {
-        width: min(100%, 420px);
+      .shell {
+        width: min(100%, 460px);
         padding: 28px;
         border: 1px solid #26313f;
         border-radius: 20px;
@@ -73,8 +70,9 @@ const mockGenerateApp = (idea: string): Promise<string> =>
         letter-spacing: 0.12em;
         text-transform: uppercase;
       }
-      h1 { margin: 0 0 10px; font-size: 26px; }
+      h1 { margin: 0 0 10px; font-size: 28px; }
       p { margin: 0 0 22px; color: #a9b5c5; line-height: 1.6; }
+      .muted { color: #a9b5c5; }
       button {
         border: 0;
         border-radius: 10px;
@@ -84,19 +82,220 @@ const mockGenerateApp = (idea: string): Promise<string> =>
         cursor: pointer;
         font-weight: 700;
       }
+      button:hover { background: #a0f2ff; }
+      .status { min-height: 22px; margin: 14px 0 0; color: #6ee7f9; font-size: 14px; }
+      input {
+        width: 100%;
+        margin: 0 0 12px;
+        border: 1px solid #26313f;
+        border-radius: 10px;
+        padding: 12px;
+        background: #0b1119;
+        color: #f4f7ff;
+        font: inherit;
+      }`;
+
+  if (
+    normalizedIdea.includes('profile') ||
+    normalizedIdea.includes('team') ||
+    normalizedIdea.includes('portfolio')
+  ) {
+    return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Profile Card</title>
+    <style>${sharedStyles}
+      .avatar {
+        display: grid;
+        width: 64px;
+        height: 64px;
+        margin-bottom: 22px;
+        place-items: center;
+        border-radius: 50%;
+        background: #253849;
+        color: #6ee7f9;
+        font-size: 20px;
+        font-weight: 800;
+      }
     </style>
   </head>
   <body>
-    <main class="card">
-      <p class="eyebrow">Generated starter</p>
-      <h1>Your first screen is ready</h1>
-      <p>${safeIdea}</p>
-      <button type="button">Get started</button>
+    <main class="shell">
+      <div class="avatar">AM</div>
+      <p class="eyebrow">Profile card</p>
+      <h1>Alex Morgan</h1>
+      <p>Product designer building calm, useful digital experiences.</p>
+      <button id="follow-button" type="button">Follow</button>
+      <p id="status" class="status" aria-live="polite"></p>
     </main>
+    <script>
+      const button = document.querySelector('#follow-button');
+      const status = document.querySelector('#status');
+      button.addEventListener('click', () => {
+        const following = button.textContent === 'Following';
+        button.textContent = following ? 'Follow' : 'Following';
+        status.textContent = following ? 'You unfollowed Alex.' : 'You are now following Alex.';
+      });
+    </script>
   </body>
-</html>`);
-    }, 3000);
-  });
+</html>`;
+  }
+
+  if (
+    normalizedIdea.includes('todo') ||
+    normalizedIdea.includes('to-do') ||
+    normalizedIdea.includes('task') ||
+    normalizedIdea.includes('habit')
+  ) {
+    return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task List</title>
+    <style>${sharedStyles}
+      form { display: flex; gap: 8px; }
+      form input { flex: 1; margin: 0; }
+      ul { display: grid; gap: 10px; margin: 22px 0 0; padding: 0; list-style: none; }
+      li { padding: 12px 14px; border-radius: 10px; background: #19212b; color: #d6e3f0; }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <p class="eyebrow">Daily focus</p>
+      <h1>Small steps, every day.</h1>
+      <p>Keep the next useful thing within reach.</p>
+      <form id="task-form">
+        <input id="task-input" aria-label="New task" placeholder="Add a task" />
+        <button type="submit">Add</button>
+      </form>
+      <ul id="task-list">
+        <li>Plan the next step</li>
+        <li>Take a focused break</li>
+      </ul>
+    </main>
+    <script>
+      const form = document.querySelector('#task-form');
+      const input = document.querySelector('#task-input');
+      const list = document.querySelector('#task-list');
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const value = input.value.trim();
+        if (!value) return;
+        const item = document.createElement('li');
+        item.textContent = value;
+        list.appendChild(item);
+        input.value = '';
+      });
+    </script>
+  </body>
+</html>`;
+  }
+
+  if (
+    normalizedIdea.includes('pricing') ||
+    normalizedIdea.includes('subscription') ||
+    normalizedIdea.includes('plan')
+  ) {
+    return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pricing Card</title>
+    <style>${sharedStyles}
+      .price { margin: 8px 0 18px; font-size: 42px; font-weight: 800; }
+      .price span { color: #a9b5c5; font-size: 14px; font-weight: 400; }
+      ul { margin: 0 0 24px; padding-left: 20px; color: #a9b5c5; line-height: 2; }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <p class="eyebrow">Simple pricing</p>
+      <h1>Starter plan</h1>
+      <p class="price">$12 <span>/ month</span></p>
+      <ul>
+        <li>Unlimited projects</li>
+        <li>Shared workspaces</li>
+        <li>Priority support</li>
+      </ul>
+      <button id="choose-button" type="button">Choose starter</button>
+      <p id="status" class="status" aria-live="polite"></p>
+    </main>
+    <script>
+      document.querySelector('#choose-button').addEventListener('click', (event) => {
+        event.currentTarget.textContent = 'Selected';
+        document.querySelector('#status').textContent = 'Starter plan selected.';
+      });
+    </script>
+  </body>
+</html>`;
+  }
+
+  if (
+    normalizedIdea.includes('landing') ||
+    normalizedIdea.includes('hero') ||
+    normalizedIdea.includes('waitlist')
+  ) {
+    return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Landing Page</title>
+    <style>${sharedStyles}
+      .shell { text-align: center; }
+      h1 { font-size: 38px; letter-spacing: -0.04em; }
+      .glow { color: #6ee7f9; }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <p class="eyebrow">Coming soon</p>
+      <h1>Build something <span class="glow">worth sharing.</span></h1>
+      <p>Join the early list for a quieter way to turn ideas into products.</p>
+      <button id="join-button" type="button">Join the waitlist</button>
+      <p id="status" class="status" aria-live="polite"></p>
+    </main>
+    <script>
+      document.querySelector('#join-button').addEventListener('click', (event) => {
+        event.currentTarget.textContent = 'You are on the list';
+        document.querySelector('#status').textContent = 'Thanks — we will be in touch.';
+      });
+    </script>
+  </body>
+</html>`;
+  }
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Generated App</title>
+    <style>${sharedStyles}
+      .card-label { display: inline-block; margin-bottom: 16px; color: #6ee7f9; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <span class="card-label">Generated starter</span>
+      <h1>Your idea, in motion.</h1>
+      <p>${safeIdea}</p>
+      <button id="action-button" type="button">Get started</button>
+      <p id="status" class="status" aria-live="polite"></p>
+    </main>
+    <script>
+      document.querySelector('#action-button').addEventListener('click', (event) => {
+        event.currentTarget.textContent = 'Started';
+        document.querySelector('#status').textContent = 'Your first action is working.';
+      });
+    </script>
+  </body>
+</html>`;
+}
 
 export default function HomeScreen() {
   const colors = useColors();
@@ -121,7 +320,7 @@ export default function HomeScreen() {
     setGeneratedCode('');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    const generatedHtml = await mockGenerateApp(prompt);
+    const generatedHtml = await localGenerateApp(prompt);
     setIsGenerating(false);
     setGeneratedCode(generatedHtml);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
