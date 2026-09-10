@@ -50,17 +50,17 @@ function buildLocalApp(idea: string): string {
         place-items: center;
         margin: 0;
         padding: 24px;
-        background: #0b1119;
+        background: radial-gradient(circle at 20% 10%, #162c3b 0, #0b1119 42%);
         color: #f4f7ff;
         font-family: Inter, system-ui, sans-serif;
       }
       .shell {
-        width: min(100%, 460px);
-        padding: 28px;
+        width: min(100%, 520px);
+        padding: 32px;
         border: 1px solid #26313f;
-        border-radius: 20px;
-        background: #11151d;
-        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
+        border-radius: 24px;
+        background: linear-gradient(145deg, #151d28, #11151d);
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.3);
       }
       .eyebrow {
         margin: 0 0 10px;
@@ -70,114 +70,199 @@ function buildLocalApp(idea: string): string {
         letter-spacing: 0.12em;
         text-transform: uppercase;
       }
-      h1 { margin: 0 0 10px; font-size: 28px; }
+      h1 { margin: 0 0 10px; font-size: 30px; letter-spacing: -0.04em; }
+      h2 { margin: 0; font-size: 18px; }
       p { margin: 0 0 22px; color: #a9b5c5; line-height: 1.6; }
       .muted { color: #a9b5c5; }
       button {
         border: 0;
-        border-radius: 10px;
-        padding: 12px 18px;
+        border-radius: 12px;
+        padding: 13px 18px;
         background: #6ee7f9;
         color: #071016;
         cursor: pointer;
+        font: inherit;
         font-weight: 700;
+        transition: transform 160ms ease, background 160ms ease;
       }
-      button:hover { background: #a0f2ff; }
+      button:hover { background: #a0f2ff; transform: translateY(-1px); }
       .status { min-height: 22px; margin: 14px 0 0; color: #6ee7f9; font-size: 14px; }
       input {
         width: 100%;
         margin: 0 0 12px;
         border: 1px solid #26313f;
-        border-radius: 10px;
-        padding: 12px;
+        border-radius: 12px;
+        padding: 13px;
         background: #0b1119;
         color: #f4f7ff;
         font: inherit;
-      }`;
+      }
+      .row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+      .surface { border: 1px solid #26313f; border-radius: 16px; background: #0b1119; }
+      .pill { display: inline-flex; padding: 6px 10px; border-radius: 99px; background: #253849; color: #6ee7f9; font-size: 12px; font-weight: 700; }
+      .grid { display: grid; gap: 12px; grid-template-columns: repeat(2, 1fr); }
+      .stat { padding: 16px; }
+      .stat strong { display: block; margin-top: 6px; font-size: 24px; }
+      .stat span { color: #a9b5c5; font-size: 12px; }
+      .full { width: 100%; }`;
 
-  if (
-    normalizedIdea.includes('profile') ||
-    normalizedIdea.includes('team') ||
-    normalizedIdea.includes('portfolio')
-  ) {
-    return `<!doctype html>
+  const page = (
+    title: string,
+    extraStyles: string,
+    body: string,
+    script: string,
+  ) => `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Profile Card</title>
-    <style>${sharedStyles}
-      .avatar {
-        display: grid;
-        width: 64px;
-        height: 64px;
-        margin-bottom: 22px;
-        place-items: center;
-        border-radius: 50%;
-        background: #253849;
-        color: #6ee7f9;
-        font-size: 20px;
-        font-weight: 800;
-      }
-    </style>
+    <title>${title}</title>
+    <style>${sharedStyles}${extraStyles}</style>
   </head>
   <body>
-    <main class="shell">
+    ${body}
+    <script>${script}</script>
+  </body>
+</html>`;
+
+  let templateKey: string;
+  switch (true) {
+    case /profile|team|portfolio/.test(normalizedIdea):
+      templateKey = 'profile';
+      break;
+    case /login|sign in|signin|register|signup|auth/.test(normalizedIdea):
+      templateKey = 'login';
+      break;
+    case /dashboard|analytics|admin|overview/.test(normalizedIdea):
+      templateKey = 'dashboard';
+      break;
+    case /button|cta|call to action/.test(normalizedIdea):
+      templateKey = 'button';
+      break;
+    case /todo|to-do|task|habit/.test(normalizedIdea):
+      templateKey = 'tasks';
+      break;
+    case /pricing|subscription|plan/.test(normalizedIdea):
+      templateKey = 'pricing';
+      break;
+    case /landing|hero|waitlist/.test(normalizedIdea):
+      templateKey = 'landing';
+      break;
+    default:
+      templateKey = 'card';
+  }
+
+  switch (templateKey) {
+    case 'profile':
+      return page(
+        'Profile Card',
+        `
+      .avatar { display: grid; width: 72px; height: 72px; margin-bottom: 22px; place-items: center; border-radius: 24px; background: linear-gradient(135deg, #6ee7f9, #8b7cff); color: #071016; font-size: 22px; font-weight: 800; }
+      .meta { display: flex; gap: 8px; margin-bottom: 24px; }`,
+        `<main class="shell">
       <div class="avatar">AM</div>
       <p class="eyebrow">Profile card</p>
       <h1>Alex Morgan</h1>
-      <p>Product designer building calm, useful digital experiences.</p>
-      <button id="follow-button" type="button">Follow</button>
+      <p>Product designer building calm, useful digital experiences for thoughtful teams.</p>
+      <div class="meta"><span class="pill">Design</span><span class="pill">Available</span></div>
+      <button id="follow-button" type="button">Follow Alex</button>
       <p id="status" class="status" aria-live="polite"></p>
-    </main>
-    <script>
-      const button = document.querySelector('#follow-button');
+    </main>`,
+        `const button = document.querySelector('#follow-button');
       const status = document.querySelector('#status');
       button.addEventListener('click', () => {
         const following = button.textContent === 'Following';
-        button.textContent = following ? 'Follow' : 'Following';
+        button.textContent = following ? 'Follow Alex' : 'Following';
         status.textContent = following ? 'You unfollowed Alex.' : 'You are now following Alex.';
-      });
-    </script>
-  </body>
-</html>`;
-  }
-
-  if (
-    normalizedIdea.includes('todo') ||
-    normalizedIdea.includes('to-do') ||
-    normalizedIdea.includes('task') ||
-    normalizedIdea.includes('habit')
-  ) {
-    return `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Task List</title>
-    <style>${sharedStyles}
+      });`,
+      );
+    case 'login':
+      return page(
+        'Welcome Back',
+        `
+      .form-copy { margin-bottom: 26px; }
+      .form-copy p { margin-bottom: 0; }
+      .links { display: flex; justify-content: space-between; margin-top: 18px; color: #6ee7f9; font-size: 13px; }`,
+        `<main class="shell">
+      <p class="eyebrow">Welcome back</p>
+      <h1>Sign in to continue.</h1>
+      <div class="form-copy"><p>Pick up where you left off and keep building.</p></div>
+      <form id="login-form">
+        <input id="email" type="email" placeholder="Email address" required />
+        <input id="password" type="password" placeholder="Password" required />
+        <button class="full" type="submit">Sign in</button>
+      </form>
+      <div class="links"><span>New here?</span><span>Create an account</span></div>
+      <p id="status" class="status" aria-live="polite"></p>
+    </main>`,
+        `document.querySelector('#login-form').addEventListener('submit', (event) => {
+        event.preventDefault();
+        document.querySelector('#status').textContent = 'Signed in successfully — welcome back.';
+      });`,
+      );
+    case 'dashboard':
+      return page(
+        'Project Dashboard',
+        `
+      .dashboard-head { margin-bottom: 24px; }
+      .grid { margin-bottom: 20px; }
+      .activity { padding: 18px; }
+      .activity p { margin: 8px 0 0; font-size: 14px; }`,
+        `<main class="shell">
+      <div class="row dashboard-head"><div><p class="eyebrow">Overview</p><h1>Good morning, Alex.</h1></div><span class="pill">Live</span></div>
+      <div class="grid">
+        <div class="surface stat"><span>Active projects</span><strong>12</strong></div>
+        <div class="surface stat"><span>Completed this week</span><strong>28</strong></div>
+      </div>
+      <div class="surface activity"><h2>Recent activity</h2><p>Design system updated · 8 minutes ago</p><p>New project created · 42 minutes ago</p></div>
+      <button id="project-button" class="full" type="button" style="margin-top: 18px;">Create project</button>
+      <p id="status" class="status" aria-live="polite"></p>
+    </main>`,
+        `document.querySelector('#project-button').addEventListener('click', () => {
+        document.querySelector('#status').textContent = 'New project draft created.';
+      });`,
+      );
+    case 'button':
+      return page(
+        'Button Showcase',
+        `
+      .button-stack { display: grid; gap: 12px; margin-top: 24px; }
+      .secondary { background: #253849; color: #d6e3f0; }
+      .outline { border: 1px solid #6ee7f9; background: transparent; color: #6ee7f9; }`,
+        `<main class="shell">
+      <p class="eyebrow">Interaction kit</p>
+      <h1>Buttons that invite action.</h1>
+      <p>Three flexible states for a clear, confident interface.</p>
+      <div class="button-stack">
+        <button id="primary-button" type="button">Primary action</button>
+        <button class="secondary" id="secondary-button" type="button">Secondary action</button>
+        <button class="outline" id="outline-button" type="button">Learn more</button>
+      </div>
+      <p id="status" class="status" aria-live="polite"></p>
+    </main>`,
+        `document.querySelectorAll('button').forEach((button) => {
+        button.addEventListener('click', () => {
+          document.querySelector('#status').textContent = button.textContent + ' selected.';
+        });
+      });`,
+      );
+    case 'tasks':
+      return page(
+        'Task List',
+        `
       form { display: flex; gap: 8px; }
       form input { flex: 1; margin: 0; }
       ul { display: grid; gap: 10px; margin: 22px 0 0; padding: 0; list-style: none; }
-      li { padding: 12px 14px; border-radius: 10px; background: #19212b; color: #d6e3f0; }
-    </style>
-  </head>
-  <body>
-    <main class="shell">
+      li { display: flex; justify-content: space-between; padding: 13px 14px; border-radius: 12px; background: #19212b; color: #d6e3f0; }
+      li.done { color: #6d7d8e; text-decoration: line-through; }`,
+        `<main class="shell">
       <p class="eyebrow">Daily focus</p>
       <h1>Small steps, every day.</h1>
       <p>Keep the next useful thing within reach.</p>
-      <form id="task-form">
-        <input id="task-input" aria-label="New task" placeholder="Add a task" />
-        <button type="submit">Add</button>
-      </form>
-      <ul id="task-list">
-        <li>Plan the next step</li>
-        <li>Take a focused break</li>
-      </ul>
-    </main>
-    <script>
-      const form = document.querySelector('#task-form');
+      <form id="task-form"><input id="task-input" aria-label="New task" placeholder="Add a task" /><button type="submit">Add</button></form>
+      <ul id="task-list"><li>Plan the next step <span>✓</span></li><li>Take a focused break <span>○</span></li></ul>
+    </main>`,
+        `const form = document.querySelector('#task-form');
       const input = document.querySelector('#task-input');
       const list = document.querySelector('#task-list');
       form.addEventListener('submit', (event) => {
@@ -185,116 +270,71 @@ function buildLocalApp(idea: string): string {
         const value = input.value.trim();
         if (!value) return;
         const item = document.createElement('li');
-        item.textContent = value;
+        const label = document.createTextNode(value);
+        const marker = document.createElement('span');
+        marker.textContent = '○';
+        item.append(label, marker);
+        item.addEventListener('click', () => item.classList.toggle('done'));
         list.appendChild(item);
         input.value = '';
-      });
-    </script>
-  </body>
-</html>`;
-  }
-
-  if (
-    normalizedIdea.includes('pricing') ||
-    normalizedIdea.includes('subscription') ||
-    normalizedIdea.includes('plan')
-  ) {
-    return `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pricing Card</title>
-    <style>${sharedStyles}
-      .price { margin: 8px 0 18px; font-size: 42px; font-weight: 800; }
-      .price span { color: #a9b5c5; font-size: 14px; font-weight: 400; }
-      ul { margin: 0 0 24px; padding-left: 20px; color: #a9b5c5; line-height: 2; }
-    </style>
-  </head>
-  <body>
-    <main class="shell">
-      <p class="eyebrow">Simple pricing</p>
-      <h1>Starter plan</h1>
+      });`,
+      );
+    case 'pricing':
+      return page(
+        'Pricing Card',
+        `
+      .price { margin: 8px 0 18px; font-size: 48px; font-weight: 800; letter-spacing: -0.06em; }
+      .price span { color: #a9b5c5; font-size: 14px; font-weight: 400; letter-spacing: 0; }
+      ul { margin: 0 0 24px; padding-left: 20px; color: #a9b5c5; line-height: 2; }`,
+        `<main class="shell">
+      <p class="eyebrow">Simple pricing</p><h1>Starter plan</h1>
       <p class="price">$12 <span>/ month</span></p>
-      <ul>
-        <li>Unlimited projects</li>
-        <li>Shared workspaces</li>
-        <li>Priority support</li>
-      </ul>
+      <ul><li>Unlimited projects</li><li>Shared workspaces</li><li>Priority support</li></ul>
       <button id="choose-button" type="button">Choose starter</button>
       <p id="status" class="status" aria-live="polite"></p>
-    </main>
-    <script>
-      document.querySelector('#choose-button').addEventListener('click', (event) => {
+    </main>`,
+        `document.querySelector('#choose-button').addEventListener('click', (event) => {
         event.currentTarget.textContent = 'Selected';
         document.querySelector('#status').textContent = 'Starter plan selected.';
-      });
-    </script>
-  </body>
-</html>`;
-  }
-
-  if (
-    normalizedIdea.includes('landing') ||
-    normalizedIdea.includes('hero') ||
-    normalizedIdea.includes('waitlist')
-  ) {
-    return `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Landing Page</title>
-    <style>${sharedStyles}
+      });`,
+      );
+    case 'landing':
+      return page(
+        'Landing Page',
+        `
       .shell { text-align: center; }
-      h1 { font-size: 38px; letter-spacing: -0.04em; }
-      .glow { color: #6ee7f9; }
-    </style>
-  </head>
-  <body>
-    <main class="shell">
+      h1 { font-size: 42px; }
+      .glow { color: #6ee7f9; }`,
+        `<main class="shell">
       <p class="eyebrow">Coming soon</p>
       <h1>Build something <span class="glow">worth sharing.</span></h1>
       <p>Join the early list for a quieter way to turn ideas into products.</p>
       <button id="join-button" type="button">Join the waitlist</button>
       <p id="status" class="status" aria-live="polite"></p>
-    </main>
-    <script>
-      document.querySelector('#join-button').addEventListener('click', (event) => {
+    </main>`,
+        `document.querySelector('#join-button').addEventListener('click', (event) => {
         event.currentTarget.textContent = 'You are on the list';
         document.querySelector('#status').textContent = 'Thanks — we will be in touch.';
-      });
-    </script>
-  </body>
-</html>`;
-  }
-
-  return `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Generated App</title>
-    <style>${sharedStyles}
-      .card-label { display: inline-block; margin-bottom: 16px; color: #6ee7f9; font-weight: 700; }
-    </style>
-  </head>
-  <body>
-    <main class="shell">
-      <span class="card-label">Generated starter</span>
+      });`,
+      );
+    case 'card':
+    default:
+      return page(
+        'Generated App',
+        `.card-label { display: inline-block; margin-bottom: 16px; color: #6ee7f9; font-weight: 700; }`,
+        `<main class="shell">
+      <span class="card-label">Offline starter</span>
       <h1>Your idea, in motion.</h1>
       <p>${safeIdea}</p>
       <button id="action-button" type="button">Get started</button>
       <p id="status" class="status" aria-live="polite"></p>
-    </main>
-    <script>
-      document.querySelector('#action-button').addEventListener('click', (event) => {
+    </main>`,
+        `document.querySelector('#action-button').addEventListener('click', (event) => {
         event.currentTarget.textContent = 'Started';
         document.querySelector('#status').textContent = 'Your first action is working.';
-      });
-    </script>
-  </body>
-</html>`;
+      });`,
+      );
+  }
 }
 
 export default function HomeScreen() {
