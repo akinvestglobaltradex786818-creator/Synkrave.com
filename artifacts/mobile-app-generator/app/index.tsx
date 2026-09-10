@@ -6,10 +6,12 @@ import { createElement, useState } from 'react';
 import {
   ActivityIndicator,
   Keyboard,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -22,6 +24,114 @@ import { useColors } from '@/hooks/useColors';
 const starterPrompts = [
   'A habit tracker with streaks',
   'A recipe planner for busy weeks',
+];
+
+type TemplateDefinition = {
+  id: string;
+  title: string;
+  description: string;
+  prompt: string;
+  icon: keyof typeof Feather.glyphMap;
+  locked: boolean;
+};
+
+const templateCatalog: TemplateDefinition[] = [
+  {
+    id: 'profile',
+    title: 'Profile card',
+    description: 'A focused personal profile',
+    prompt: 'A polished profile card for a product designer',
+    icon: 'user',
+    locked: false,
+  },
+  {
+    id: 'login',
+    title: 'Login screen',
+    description: 'A clean authentication flow',
+    prompt: 'A modern login and registration screen',
+    icon: 'log-in',
+    locked: false,
+  },
+  {
+    id: 'button',
+    title: 'CTA buttons',
+    description: 'A compact interaction kit',
+    prompt: 'A button showcase with primary and secondary CTAs',
+    icon: 'mouse-pointer',
+    locked: false,
+  },
+  {
+    id: 'analytics',
+    title: 'Analytics dashboard',
+    description: 'Metrics, trends, and reporting',
+    prompt: 'An analytics dashboard with traffic charts and KPIs',
+    icon: 'bar-chart-2',
+    locked: true,
+  },
+  {
+    id: 'tasks',
+    title: 'Task manager',
+    description: 'Projects, tasks, and focus',
+    prompt: 'A professional task manager with projects and priorities',
+    icon: 'check-square',
+    locked: true,
+  },
+  {
+    id: 'pricing',
+    title: 'Pricing page',
+    description: 'Plans built for conversion',
+    prompt: 'A professional pricing page with monthly plans',
+    icon: 'credit-card',
+    locked: true,
+  },
+  {
+    id: 'landing',
+    title: 'Marketing landing',
+    description: 'A launch-ready hero layout',
+    prompt: 'A polished marketing landing page with a waitlist',
+    icon: 'globe',
+    locked: true,
+  },
+  {
+    id: 'storefront',
+    title: 'E-commerce storefront',
+    description: 'Catalog, products, and checkout',
+    prompt: 'An e-commerce storefront with featured products',
+    icon: 'shopping-bag',
+    locked: true,
+  },
+  {
+    id: 'crm',
+    title: 'CRM pipeline',
+    description: 'Leads and customer stages',
+    prompt: 'A CRM pipeline dashboard for managing leads',
+    icon: 'users',
+    locked: true,
+  },
+  {
+    id: 'calendar',
+    title: 'Booking calendar',
+    description: 'Availability and appointments',
+    prompt: 'A booking calendar for appointments and availability',
+    icon: 'calendar',
+    locked: true,
+  },
+  {
+    id: 'community',
+    title: 'Community feed',
+    description: 'Posts, reactions, and updates',
+    prompt: 'A social community feed with posts and reactions',
+    icon: 'message-circle',
+    locked: true,
+  },
+  {
+    id: 'admin',
+    title: 'Admin control center',
+    description: 'Controls for an operations team',
+    prompt: 'An admin control center with operational overview',
+    icon: 'shield',
+    locked: true,
+  },
 ];
 
 const escapeHtml = (value: string) =>
@@ -348,6 +458,109 @@ export default function HomeScreen() {
   const [generatedCode, setGeneratedCode] = useState<string>('');
   const [isLivePreview, setIsLivePreview] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [authModalVisible, setAuthModalVisible] = useState<boolean>(false);
+  const [authReason, setAuthReason] = useState<string>('Unlock professional templates');
+  const [authEmail, setAuthEmail] = useState<string>('');
+  const [authPassword, setAuthPassword] = useState<string>('');
+  const [authError, setAuthError] = useState<string>('');
+  const [actionStatus, setActionStatus] = useState<string>('');
+  const [adminPasswordModalVisible, setAdminPasswordModalVisible] =
+    useState<boolean>(false);
+  const [adminPanelVisible, setAdminPanelVisible] = useState<boolean>(false);
+  const [adminPassword, setAdminPassword] = useState<string>('');
+  const [adminError, setAdminError] = useState<string>('');
+  const [adControls, setAdControls] = useState<Record<string, boolean>>({
+    interest: true,
+    gambling: true,
+    adult: true,
+  });
+
+  const openAuthModal = (reason: string) => {
+    setAuthReason(reason);
+    setAuthError('');
+    setAuthModalVisible(true);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+  };
+
+  const closeAuthModal = () => {
+    Keyboard.dismiss();
+    setAuthModalVisible(false);
+    setAuthError('');
+  };
+
+  const handleOfflineLogin = () => {
+    const email = authEmail.trim();
+    if (!email.includes('@') || !email.includes('.')) {
+      setAuthError('Enter a valid email address.');
+      return;
+    }
+    if (authPassword.length < 6) {
+      setAuthError('Use a password with at least 6 characters.');
+      return;
+    }
+
+    setIsAuthenticated(true);
+    setAuthModalVisible(false);
+    setAuthError('');
+    setActionStatus('You are signed in. All professional templates are unlocked.');
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
+  const handleGoogleLogin = () => {
+    setIsAuthenticated(true);
+    setAuthModalVisible(false);
+    setAuthError('');
+    setActionStatus('Google sign-in completed in offline demo mode.');
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
+  const handleTemplatePress = (template: TemplateDefinition) => {
+    if (template.locked && !isAuthenticated) {
+      openAuthModal(`Unlock ${template.title}`);
+      return;
+    }
+
+    setPrompt(template.prompt);
+    setError('');
+    setActionStatus(`${template.title} selected. Tap Generate App to build it.`);
+    Haptics.selectionAsync();
+  };
+
+  const handleDownload = () => {
+    if (!isAuthenticated) {
+      openAuthModal('Download generated app');
+      return;
+    }
+    setActionStatus('Download prepared offline. Your generated file is index.html.');
+  };
+
+  const handleDeploy = () => {
+    if (!isAuthenticated) {
+      openAuthModal('Deploy generated app');
+      return;
+    }
+    setActionStatus('Deployment prepared offline. Connect a hosting provider to publish.');
+  };
+
+  const handleAdminTrigger = () => {
+    setAdminPassword('');
+    setAdminError('');
+    setAdminPasswordModalVisible(true);
+    Haptics.selectionAsync();
+  };
+
+  const handleAdminUnlock = () => {
+    if (adminPassword !== 'admin123') {
+      setAdminError('Incorrect admin password.');
+      return;
+    }
+    setAdminPasswordModalVisible(false);
+    setAdminPanelVisible(true);
+    setAdminError('');
+    setAdminPassword('');
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
 
   const handleGenerate = async () => {
     Keyboard.dismiss();
@@ -405,14 +618,20 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <View style={styles.brandRow}>
+           <Pressable
+             accessibilityLabel="Open admin controls"
+             accessibilityRole="button"
+             onLongPress={handleAdminTrigger}
+             delayLongPress={900}
+             style={({ pressed }) => [styles.brandRow, { opacity: pressed ? 0.72 : 1 }]}
+           >
             <View style={[styles.brandMark, { backgroundColor: colors.accent }]}>
               <Feather name="code" size={18} color={colors.primary} />
             </View>
             <Text style={[styles.brandName, { color: colors.foreground }]}>
               appforge
             </Text>
-          </View>
+           </Pressable>
           <View style={[styles.betaPill, { borderColor: colors.border }]}>
             <View style={[styles.liveDot, { backgroundColor: colors.primary }]} />
             <Text style={[styles.betaText, { color: colors.mutedForeground }]}>
@@ -574,6 +793,84 @@ export default function HomeScreen() {
           )}
         </Pressable>
 
+        <View style={styles.templatesSection}>
+          <View style={styles.templatesHeader}>
+            <View>
+              <Text style={[styles.outputEyebrow, { color: colors.mutedForeground }]}>
+                STARTER LIBRARY
+              </Text>
+              <Text style={[styles.templatesTitle, { color: colors.foreground }]}>
+                Choose a template
+              </Text>
+            </View>
+            <View style={[styles.templateCount, { backgroundColor: colors.muted }]}>
+              <Text style={[styles.templateCountText, { color: colors.mutedForeground }]}>
+                {isAuthenticated ? '12 unlocked' : '3 free'}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.templateGrid}>
+            {templateCatalog.map((template) => {
+              const isLocked = template.locked && !isAuthenticated;
+              return (
+                <Pressable
+                  key={template.id}
+                  testID={`template-${template.id}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    isLocked ? `Unlock ${template.title}` : `Use ${template.title}`
+                  }
+                  onPress={() => handleTemplatePress(template)}
+                  style={({ pressed }) => [
+                    styles.templateCard,
+                    {
+                      backgroundColor: colors.card,
+                      borderColor: isLocked ? colors.border : colors.accent,
+                      opacity: pressed ? 0.72 : 1,
+                    },
+                  ]}
+                >
+                  <View style={styles.templateCardTop}>
+                    <View
+                      style={[
+                        styles.templateIcon,
+                        { backgroundColor: isLocked ? colors.muted : colors.accent },
+                      ]}
+                    >
+                      <Feather
+                        name={template.icon}
+                        size={16}
+                        color={isLocked ? colors.mutedForeground : colors.primary}
+                      />
+                    </View>
+                    {isLocked ? (
+                      <Feather name="lock" size={14} color={colors.mutedForeground} />
+                    ) : (
+                      <Text style={[styles.freeLabel, { color: colors.primary }]}>
+                        {template.locked ? 'PRO' : 'FREE'}
+                      </Text>
+                    )}
+                  </View>
+                  <Text style={[styles.templateName, { color: colors.foreground }]}>
+                    {template.title}
+                  </Text>
+                  <Text style={[styles.templateDescription, { color: colors.mutedForeground }]}>
+                    {template.description}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          {actionStatus ? (
+            <View style={[styles.actionStatus, { backgroundColor: colors.accent }]}>
+              <Feather name="info" size={14} color={colors.primary} />
+              <Text style={[styles.actionStatusText, { color: colors.accentForeground }]}>
+                {actionStatus}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+
         <View style={styles.outputHeader}>
           <View>
             <Text style={[styles.outputEyebrow, { color: colors.mutedForeground }]}>
@@ -698,6 +995,46 @@ export default function HomeScreen() {
           )}
         </View>
 
+        <View style={styles.businessActions}>
+          <Pressable
+            testID="download-button"
+            accessibilityRole="button"
+            accessibilityLabel="Download index.html"
+            onPress={handleDownload}
+            style={({ pressed }) => [
+              styles.secondaryAction,
+              {
+                borderColor: colors.border,
+                backgroundColor: colors.secondary,
+                opacity: pressed ? 0.72 : 1,
+              },
+            ]}
+          >
+            <Feather name="download" size={16} color={colors.secondaryForeground} />
+            <Text style={[styles.secondaryActionText, { color: colors.secondaryForeground }]}>
+              Download index.html
+            </Text>
+          </Pressable>
+          <Pressable
+            testID="deploy-button"
+            accessibilityRole="button"
+            accessibilityLabel="Deploy to Internet"
+            onPress={handleDeploy}
+            style={({ pressed }) => [
+              styles.primaryAction,
+              {
+                backgroundColor: colors.primary,
+                opacity: pressed ? 0.72 : 1,
+              },
+            ]}
+          >
+            <Feather name="upload-cloud" size={16} color={colors.primaryForeground} />
+            <Text style={[styles.primaryActionText, { color: colors.primaryForeground }]}>
+              Deploy to Internet
+            </Text>
+          </Pressable>
+        </View>
+
         <View style={styles.footer}>
           <Feather name="zap" size={14} color={colors.mutedForeground} />
           <Text style={[styles.footerText, { color: colors.mutedForeground }]}>
@@ -705,6 +1042,333 @@ export default function HomeScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={authModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeAuthModal}
+      >
+        <KeyboardAvoidingView behavior="padding" style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalCard,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={[styles.modalEyebrow, { color: colors.primary }]}>
+                  FREE ACCOUNT
+                </Text>
+                <Text style={[styles.modalTitle, { color: colors.foreground }]}>
+                  Unlock appforge
+                </Text>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Close login"
+                onPress={closeAuthModal}
+                style={styles.iconButton}
+              >
+                <Feather name="x" size={20} color={colors.mutedForeground} />
+              </Pressable>
+            </View>
+            <Text style={[styles.modalDescription, { color: colors.mutedForeground }]}>
+              {authReason}. Sign in for free to unlock all professional tools.
+            </Text>
+            <TextInput
+              testID="auth-email"
+              autoCapitalize="none"
+              autoComplete="email"
+              keyboardType="email-address"
+              onChangeText={(value) => {
+                setAuthEmail(value);
+                if (authError) setAuthError('');
+              }}
+              placeholder="Email address"
+              placeholderTextColor={colors.mutedForeground}
+              style={[
+                styles.modalInput,
+                { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground },
+              ]}
+              value={authEmail}
+            />
+            <TextInput
+              testID="auth-password"
+              autoCapitalize="none"
+              autoComplete="password"
+              onChangeText={(value) => {
+                setAuthPassword(value);
+                if (authError) setAuthError('');
+              }}
+              placeholder="Password"
+              placeholderTextColor={colors.mutedForeground}
+              secureTextEntry
+              style={[
+                styles.modalInput,
+                { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground },
+              ]}
+              value={authPassword}
+            />
+            {authError ? (
+              <Text style={[styles.modalError, { color: colors.destructive }]}>
+                {authError}
+              </Text>
+            ) : null}
+            <Pressable
+              testID="email-login-button"
+              accessibilityRole="button"
+              accessibilityLabel="Continue with email"
+              onPress={handleOfflineLogin}
+              style={({ pressed }) => [
+                styles.modalPrimaryButton,
+                { backgroundColor: colors.primary, opacity: pressed ? 0.72 : 1 },
+              ]}
+            >
+              <Text style={[styles.modalPrimaryText, { color: colors.primaryForeground }]}>
+                Continue with email
+              </Text>
+            </Pressable>
+            <View style={styles.modalDivider}>
+              <View style={[styles.modalDividerLine, { backgroundColor: colors.border }]} />
+              <Text style={[styles.modalDividerText, { color: colors.mutedForeground }]}>
+                OR
+              </Text>
+              <View style={[styles.modalDividerLine, { backgroundColor: colors.border }]} />
+            </View>
+            <Pressable
+              testID="google-login-button"
+              accessibilityRole="button"
+              accessibilityLabel="Continue with Google"
+              onPress={handleGoogleLogin}
+              style={({ pressed }) => [
+                styles.googleButton,
+                {
+                  backgroundColor: colors.secondary,
+                  borderColor: colors.border,
+                  opacity: pressed ? 0.72 : 1,
+                },
+              ]}
+            >
+              <Text style={[styles.googleMark, { color: colors.primary }]}>G</Text>
+              <Text style={[styles.googleButtonText, { color: colors.secondaryForeground }]}>
+                Continue with Google
+              </Text>
+            </Pressable>
+            <Text style={[styles.privacyNote, { color: colors.mutedForeground }]}>
+              Offline demo account. No credentials leave this device.
+            </Text>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal
+        visible={adminPasswordModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAdminPasswordModalVisible(false)}
+      >
+        <KeyboardAvoidingView behavior="padding" style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalCard,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={[styles.modalEyebrow, { color: colors.primary }]}>
+                  RESTRICTED
+                </Text>
+                <Text style={[styles.modalTitle, { color: colors.foreground }]}>
+                  Admin access
+                </Text>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Close admin access"
+                onPress={() => setAdminPasswordModalVisible(false)}
+                style={styles.iconButton}
+              >
+                <Feather name="x" size={20} color={colors.mutedForeground} />
+              </Pressable>
+            </View>
+            <Text style={[styles.modalDescription, { color: colors.mutedForeground }]}>
+              This local panel is hidden behind a password for demo testing.
+            </Text>
+            <TextInput
+              testID="admin-password"
+              autoCapitalize="none"
+              onChangeText={(value) => {
+                setAdminPassword(value);
+                if (adminError) setAdminError('');
+              }}
+              placeholder="Admin password"
+              placeholderTextColor={colors.mutedForeground}
+              secureTextEntry
+              style={[
+                styles.modalInput,
+                { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground },
+              ]}
+              value={adminPassword}
+            />
+            {adminError ? (
+              <Text style={[styles.modalError, { color: colors.destructive }]}>
+                {adminError}
+              </Text>
+            ) : null}
+            <Pressable
+              testID="admin-unlock-button"
+              accessibilityRole="button"
+              accessibilityLabel="Unlock admin panel"
+              onPress={handleAdminUnlock}
+              style={({ pressed }) => [
+                styles.modalPrimaryButton,
+                { backgroundColor: colors.primary, opacity: pressed ? 0.72 : 1 },
+              ]}
+            >
+              <Text style={[styles.modalPrimaryText, { color: colors.primaryForeground }]}>
+                Open admin panel
+              </Text>
+            </Pressable>
+            <Text style={[styles.privacyNote, { color: colors.mutedForeground }]}>
+              Local-only demo gate. Use a server-side secret before production.
+            </Text>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal
+        visible={adminPanelVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setAdminPanelVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.adminPanelCard,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={[styles.modalEyebrow, { color: colors.primary }]}>
+                  ADMIN PANEL
+                </Text>
+                <Text style={[styles.modalTitle, { color: colors.foreground }]}>
+                  Operations overview
+                </Text>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Close admin panel"
+                onPress={() => setAdminPanelVisible(false)}
+                style={styles.iconButton}
+              >
+                <Feather name="x" size={20} color={colors.mutedForeground} />
+              </Pressable>
+            </View>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.adminPanelContent}
+            >
+              <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
+                MOCK TRAFFIC ANALYTICS
+              </Text>
+              <View style={styles.analyticsGrid}>
+                <View style={[styles.analyticsCard, { backgroundColor: colors.background }]}>
+                  <Text style={[styles.analyticsValue, { color: colors.foreground }]}>12.8k</Text>
+                  <Text style={[styles.analyticsLabel, { color: colors.mutedForeground }]}>
+                    Visitors
+                  </Text>
+                </View>
+                <View style={[styles.analyticsCard, { backgroundColor: colors.background }]}>
+                  <Text style={[styles.analyticsValue, { color: colors.foreground }]}>4.2k</Text>
+                  <Text style={[styles.analyticsLabel, { color: colors.mutedForeground }]}>
+                    Apps generated
+                  </Text>
+                </View>
+                <View style={[styles.analyticsCard, { backgroundColor: colors.background }]}>
+                  <Text style={[styles.analyticsValue, { color: colors.foreground }]}>68%</Text>
+                  <Text style={[styles.analyticsLabel, { color: colors.mutedForeground }]}>
+                    Return rate
+                  </Text>
+                </View>
+                <View style={[styles.analyticsCard, { backgroundColor: colors.background }]}>
+                  <Text style={[styles.analyticsValue, { color: colors.primary }]}>+24%</Text>
+                  <Text style={[styles.analyticsLabel, { color: colors.mutedForeground }]}>
+                    Weekly growth
+                  </Text>
+                </View>
+              </View>
+              <View style={[styles.chartCard, { backgroundColor: colors.background }]}>
+                <View style={styles.chartHeader}>
+                  <Text style={[styles.chartTitle, { color: colors.foreground }]}>
+                    Weekly traffic
+                  </Text>
+                  <Text style={[styles.chartPeriod, { color: colors.primary }]}>7 days</Text>
+                </View>
+                <View style={styles.chartBars}>
+                  {[42, 58, 46, 74, 62, 88, 96].map((height, index) => (
+                    <View key={index} style={styles.chartBarColumn}>
+                      <View
+                        style={[
+                          styles.chartBar,
+                          { backgroundColor: colors.primary, height: height * 1.25 },
+                        ]}
+                      />
+                      <Text style={[styles.chartDay, { color: colors.mutedForeground }]}>
+                        {['M', 'T', 'W', 'T', 'F', 'S', 'S'][index]}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+              <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
+                SHARIAH AD-MOB CONTROLS
+              </Text>
+              <View style={[styles.controlsCard, { backgroundColor: colors.background }]}>
+                <Text style={[styles.controlsDescription, { color: colors.mutedForeground }]}>
+                  Block sensitive ad categories completely offline before an ad slot is shown.
+                </Text>
+                {[
+                  ['interest', 'Interest', 'Block interest-based promotions'],
+                  ['gambling', 'Gambling', 'Block betting and casino ads'],
+                  ['adult', 'Adult Content', 'Block explicit or mature ads'],
+                ].map(([key, title, description]) => (
+                  <View key={key} style={styles.controlRow}>
+                    <View style={styles.controlCopy}>
+                      <Text style={[styles.controlTitle, { color: colors.foreground }]}>
+                        {title}
+                      </Text>
+                      <Text style={[styles.controlDescription, { color: colors.mutedForeground }]}>
+                        {description}
+                      </Text>
+                    </View>
+                    <Switch
+                      accessibilityLabel={`Block ${title}`}
+                      onValueChange={(value) =>
+                        setAdControls((current) => ({ ...current, [key]: value }))
+                      }
+                      thumbColor={adControls[key] ? colors.primaryForeground : colors.mutedForeground}
+                      trackColor={{ false: colors.secondary, true: colors.primary }}
+                      value={adControls[key]}
+                    />
+                  </View>
+                ))}
+              </View>
+              <View style={[styles.protectionStatus, { backgroundColor: colors.accent }]}>
+                <Feather name="shield" size={15} color={colors.primary} />
+                <Text style={[styles.protectionStatusText, { color: colors.accentForeground }]}>
+                  {Object.values(adControls).filter(Boolean).length}/3 categories blocked
+                </Text>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -873,6 +1537,85 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
     fontSize: 16,
   },
+  templatesSection: {
+    marginTop: 36,
+  },
+  templatesHeader: {
+    alignItems: 'flex-end',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  templatesTitle: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 20,
+    letterSpacing: -0.5,
+    marginTop: 5,
+  },
+  templateCount: {
+    borderRadius: 99,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  templateCountText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
+  },
+  templateGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 14,
+  },
+  templateCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    minHeight: 142,
+    padding: 13,
+    width: '48%',
+  },
+  templateCardTop: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  templateIcon: {
+    alignItems: 'center',
+    borderRadius: 10,
+    height: 34,
+    justifyContent: 'center',
+    width: 34,
+  },
+  freeLabel: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 9,
+    letterSpacing: 0.7,
+  },
+  templateName: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
+    marginTop: 15,
+  },
+  templateDescription: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 5,
+  },
+  actionStatus: {
+    alignItems: 'center',
+    borderRadius: 12,
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  actionStatusText: {
+    flex: 1,
+    fontFamily: 'Inter_500Medium',
+    fontSize: 11,
+    lineHeight: 16,
+  },
   outputHeader: {
     alignItems: 'flex-end',
     flexDirection: 'row',
@@ -973,6 +1716,272 @@ const styles = StyleSheet.create({
     }),
     fontSize: 13,
     lineHeight: 21,
+  },
+  businessActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 12,
+  },
+  secondaryAction: {
+    alignItems: 'center',
+    borderRadius: 13,
+    borderWidth: 1,
+    flex: 1,
+    flexDirection: 'row',
+    gap: 7,
+    justifyContent: 'center',
+    minHeight: 48,
+    paddingHorizontal: 10,
+  },
+  secondaryActionText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+  },
+  primaryAction: {
+    alignItems: 'center',
+    borderRadius: 13,
+    flex: 1,
+    flexDirection: 'row',
+    gap: 7,
+    justifyContent: 'center',
+    minHeight: 48,
+    paddingHorizontal: 10,
+  },
+  primaryActionText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 11,
+  },
+  modalOverlay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.72)',
+    flex: 1,
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    borderRadius: 22,
+    borderWidth: 1,
+    maxWidth: 440,
+    padding: 22,
+    width: '100%',
+  },
+  modalHeader: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalEyebrow: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 10,
+    letterSpacing: 1.5,
+  },
+  modalTitle: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 24,
+    letterSpacing: -0.8,
+    marginTop: 6,
+  },
+  iconButton: {
+    alignItems: 'center',
+    height: 34,
+    justifyContent: 'center',
+    width: 34,
+  },
+  modalDescription: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    lineHeight: 20,
+    marginBottom: 18,
+    marginTop: 12,
+  },
+  modalInput: {
+    borderRadius: 12,
+    borderWidth: 1,
+    fontFamily: 'Inter_400Regular',
+    fontSize: 15,
+    height: 50,
+    marginTop: 10,
+    paddingHorizontal: 14,
+  },
+  modalError: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 12,
+    marginTop: 8,
+  },
+  modalPrimaryButton: {
+    alignItems: 'center',
+    borderRadius: 12,
+    height: 50,
+    justifyContent: 'center',
+    marginTop: 16,
+  },
+  modalPrimaryText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 14,
+  },
+  modalDivider: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    marginVertical: 17,
+  },
+  modalDividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  modalDividerText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 10,
+    letterSpacing: 1,
+  },
+  googleButton: {
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    height: 50,
+    justifyContent: 'center',
+  },
+  googleMark: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 17,
+  },
+  googleButtonText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+  },
+  privacyNote: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 10,
+    lineHeight: 15,
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  adminPanelCard: {
+    borderRadius: 24,
+    borderWidth: 1,
+    flex: 1,
+    marginTop: 54,
+    maxWidth: 520,
+    overflow: 'hidden',
+    width: '100%',
+  },
+  adminPanelContent: {
+    padding: 20,
+    paddingBottom: 34,
+  },
+  sectionLabel: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 10,
+    letterSpacing: 1.5,
+    marginBottom: 10,
+    marginTop: 22,
+  },
+  analyticsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  analyticsCard: {
+    borderRadius: 14,
+    minHeight: 86,
+    padding: 14,
+    width: '48%',
+  },
+  analyticsValue: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 22,
+    letterSpacing: -0.6,
+  },
+  analyticsLabel: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 11,
+    marginTop: 7,
+  },
+  chartCard: {
+    borderRadius: 14,
+    marginTop: 10,
+    padding: 16,
+  },
+  chartHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  chartTitle: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+  },
+  chartPeriod: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+  },
+  chartBars: {
+    alignItems: 'flex-end',
+    flexDirection: 'row',
+    height: 150,
+    justifyContent: 'space-between',
+    marginTop: 18,
+  },
+  chartBarColumn: {
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  chartBar: {
+    borderRadius: 5,
+    minHeight: 8,
+    width: 18,
+  },
+  chartDay: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 10,
+    marginTop: 8,
+  },
+  controlsCard: {
+    borderRadius: 14,
+    padding: 16,
+  },
+  controlsDescription: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+  controlRow: {
+    alignItems: 'center',
+    borderTopColor: '#26313F',
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+  },
+  controlCopy: {
+    flex: 1,
+  },
+  controlTitle: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+  },
+  controlDescription: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 4,
+  },
+  protectionStatus: {
+    alignItems: 'center',
+    borderRadius: 12,
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  protectionStatusText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
   },
   footer: {
     alignItems: 'center',
