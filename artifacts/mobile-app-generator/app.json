@@ -1,20 +1,25 @@
 {
   "expo": {
-    "name": "Mobile App Generator",
-    "slug": "mobile-app-generator",
+    "name": "PocketDev AI",
+    "slug": "pocketdevai",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "mobile-app-generator",
+    "scheme": "pocketdevai",
     "userInterfaceStyle": "dark",
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.pocketdevai.app"
     },
-    "android": {},
+    "android": {
+      "package": "com.pocketdevai.app"
+    },
     "web": {
       "favicon": "./assets/images/icon.png"
     },
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router"
+    ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
