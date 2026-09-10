@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { createElement, useState } from 'react';
 import {
   ActivityIndicator,
   Keyboard,
@@ -15,6 +15,7 @@ import {
   View,
 } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { WebView } from 'react-native-webview';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 
@@ -345,6 +346,7 @@ export default function HomeScreen() {
   const [isListening, setIsListening] = useState<boolean>(false);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [generatedCode, setGeneratedCode] = useState<string>('');
+  const [isLivePreview, setIsLivePreview] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
 
   const handleGenerate = async () => {
@@ -358,6 +360,7 @@ export default function HomeScreen() {
     setError('');
     setIsGenerating(true);
     setGeneratedCode('');
+    setIsLivePreview(false);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     const generatedHtml = await localGenerateApp(prompt);
@@ -580,15 +583,61 @@ export default function HomeScreen() {
               Generated output
             </Text>
           </View>
-          <View style={[styles.outputBadge, { backgroundColor: colors.muted }]}>
-            <Feather
-              name={generatedCode ? 'check-circle' : 'code'}
-              size={14}
-              color={generatedCode ? colors.primary : colors.mutedForeground}
-            />
-            <Text style={[styles.outputBadgeText, { color: colors.mutedForeground }]}>
-              {generatedCode ? 'READY' : 'EMPTY'}
-            </Text>
+          <View style={styles.outputActions}>
+            <Pressable
+              testID="live-preview-toggle"
+              accessibilityRole="button"
+              accessibilityLabel={
+                isLivePreview ? 'Show generated code' : 'View live app'
+              }
+              disabled={!generatedCode}
+              onPress={() => {
+                setIsLivePreview((current) => !current);
+                Haptics.selectionAsync();
+              }}
+              style={({ pressed }) => [
+                styles.previewToggle,
+                {
+                  backgroundColor: isLivePreview
+                    ? colors.primary
+                    : colors.muted,
+                  borderColor: isLivePreview ? colors.primary : colors.border,
+                  opacity: !generatedCode ? 0.45 : pressed ? 0.7 : 1,
+                },
+              ]}
+            >
+              <Feather
+                name={isLivePreview ? 'code' : 'play'}
+                size={13}
+                color={
+                  isLivePreview
+                    ? colors.primaryForeground
+                    : colors.secondaryForeground
+                }
+              />
+              <Text
+                style={[
+                  styles.previewToggleText,
+                  {
+                    color: isLivePreview
+                      ? colors.primaryForeground
+                      : colors.secondaryForeground,
+                  },
+                ]}
+              >
+                {isLivePreview ? 'Show code' : 'View live app'}
+              </Text>
+            </Pressable>
+            <View style={[styles.outputBadge, { backgroundColor: colors.muted }]}>
+              <Feather
+                name={generatedCode ? 'check-circle' : 'code'}
+                size={14}
+                color={generatedCode ? colors.primary : colors.mutedForeground}
+              />
+              <Text style={[styles.outputBadgeText, { color: colors.mutedForeground }]}>
+                {generatedCode ? 'READY' : 'EMPTY'}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -599,15 +648,41 @@ export default function HomeScreen() {
           ]}
         >
           {generatedCode ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.codeContent}
-            >
-              <Text style={[styles.codeText, { color: colors.secondaryForeground }]}>
-                {generatedCode}
-              </Text>
-            </ScrollView>
+            isLivePreview ? (
+              <View style={styles.previewFrame}>
+                {Platform.OS === 'web' ? (
+                  createElement('iframe', {
+                    title: 'Generated live app preview',
+                    srcDoc: generatedCode,
+                    sandbox: 'allow-scripts',
+                    style: {
+                      border: '0',
+                      height: 360,
+                      width: '100%',
+                    },
+                  })
+                ) : (
+                  <WebView
+                    originWhitelist={['*']}
+                    source={{ html: generatedCode }}
+                    javaScriptEnabled
+                    domStorageEnabled
+                    startInLoadingState
+                    style={styles.webView}
+                  />
+                )}
+              </View>
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.codeContent}
+              >
+                <Text style={[styles.codeText, { color: colors.secondaryForeground }]}>
+                  {generatedCode}
+                </Text>
+              </ScrollView>
+            )
           ) : (
             <View style={styles.emptyOutput}>
               <View style={[styles.outputIcon, { backgroundColor: colors.accent }]}>
@@ -804,6 +879,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 42,
   },
+  outputActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 7,
+  },
   outputEyebrow: {
     fontFamily: 'Inter_700Bold',
     fontSize: 10,
@@ -828,12 +908,34 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 0.8,
   },
+  previewToggle: {
+    alignItems: 'center',
+    borderRadius: 99,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  previewToggleText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
+  },
   outputCard: {
     borderRadius: 18,
     borderWidth: 1,
     marginTop: 14,
     minHeight: 190,
     overflow: 'hidden',
+  },
+  previewFrame: {
+    minHeight: 340,
+    overflow: 'hidden',
+  },
+  webView: {
+    backgroundColor: '#0B1119',
+    height: 360,
+    width: '100%',
   },
   emptyOutput: {
     alignItems: 'center',
