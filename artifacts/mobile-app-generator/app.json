@@ -12,7 +12,21 @@
       "bundleIdentifier": "com.pocketdevai.app"
     },
     "android": {
-      "package": "com.pocketdevai.app"
+      "package": "com.pocketdevai.app",
+      "versionCode": 1,
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "READ_MEDIA_IMAGES"
+      ]
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.pocketdevai.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "PocketDev AI uses the camera to scan screenshots for the Scan & Clone tool.",
+        "NSMicrophoneUsageDescription": "PocketDev AI uses the microphone for multilingual voice-to-code prompts."
+      }
     },
     "web": {
       "favicon": "./assets/images/icon.png"

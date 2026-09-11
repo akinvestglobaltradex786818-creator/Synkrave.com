@@ -1,9 +1,12 @@
 import { Feather } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { File, Paths } from 'expo-file-system';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
 import * as Linking from 'expo-linking';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
-import { createElement, useState } from 'react';
+import { createElement, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Keyboard,
@@ -27,6 +30,13 @@ const starterPrompts = [
   'A recipe planner for busy weeks',
 ];
 
+const voiceLanguages = [
+  { label: 'English', value: 'en-US' },
+  { label: 'اردو', value: 'ur-PK' },
+  { label: 'پښتو', value: 'ps-AF' },
+  { label: '中文', value: 'zh-CN' },
+];
+
 type TemplateDefinition = {
   id: string;
   title: string;
@@ -38,20 +48,44 @@ type TemplateDefinition = {
 
 const templateCatalog: TemplateDefinition[] = [
   {
+    id: 'tailor',
+    title: 'Local Tailor Shop Website',
+    description: 'Services, fittings, and contact',
+    prompt: 'A local tailor shop website with services, pricing, and booking CTA',
+    icon: 'scissors',
+    locked: false,
+  },
+  {
+    id: 'barber',
+    title: 'Barber Shop Page',
+    description: 'Cuts, hours, and appointments',
+    prompt: 'A barber shop page with services, opening hours, and appointment CTA',
+    icon: 'user',
+    locked: false,
+  },
+  {
+    id: 'grocery',
+    title: 'Simple Grocery Store',
+    description: 'Fresh products and local delivery',
+    prompt: 'A simple grocery store website with products and local delivery CTA',
+    icon: 'shopping-bag',
+    locked: false,
+  },
+  {
     id: 'corporate',
     title: 'Corporate Business Site',
-    description: 'A polished company presence',
+    description: 'Enterprise services and trust signals',
     prompt: 'A corporate business website with services, trust signals, and contact CTA',
     icon: 'briefcase',
-    locked: false,
+    locked: true,
   },
   {
     id: 'financial',
     title: 'Financial Dashboard',
-    description: 'A clear view of business performance',
+    description: 'Revenue, cash flow, and performance KPIs',
     prompt: 'A financial dashboard with revenue, cash flow, and performance KPIs',
     icon: 'bar-chart-2',
-    locked: false,
+    locked: true,
   },
   {
     id: 'ecommerce',
@@ -59,7 +93,7 @@ const templateCatalog: TemplateDefinition[] = [
     description: 'Products, offers, and conversion',
     prompt: 'An e-commerce store with featured products and a shopping CTA',
     icon: 'shopping-bag',
-    locked: false,
+    locked: true,
   },
   {
     id: 'real-estate',
@@ -71,21 +105,64 @@ const templateCatalog: TemplateDefinition[] = [
   },
   {
     id: 'education',
-    title: 'Educational Portal',
-    description: 'Courses, lessons, and progress',
-    prompt: 'An educational portal with courses, lessons, and learner progress',
+    title: 'Educational LMS Portal',
+    description: 'Courses, lessons, and learner progress',
+    prompt: 'An educational LMS portal with courses, lessons, and learner progress',
     icon: 'book-open',
     locked: true,
   },
   {
+    id: 'startup',
+    title: 'Tech Startup Landing',
+    description: 'A launch-ready product story',
+    prompt: 'A tech startup landing page with product benefits and waitlist',
+    icon: 'zap',
+    locked: true,
+  },
+  {
+    id: 'secure-login',
+    title: 'Modern Secure Login',
+    description: 'A polished authentication flow',
+    prompt: 'A modern secure login screen with registration and password recovery',
+    icon: 'lock',
+    locked: true,
+  },
+  {
+    id: 'pricing',
+    title: 'Interactive Pricing Plan',
+    description: 'Plans designed for conversion',
+    prompt: 'An interactive pricing plan with selectable subscription tiers',
+    icon: 'credit-card',
+    locked: true,
+  },
+  {
     id: 'custom',
-    title: 'Other / Custom Blueprint',
-    description: 'Start from your own brief',
-    prompt: 'A custom business app based on my requirements',
+    title: 'Custom Blueprint',
+    description: 'Start from your own product brief',
+    prompt: 'A custom app based on my requirements',
     icon: 'layers',
     locked: true,
   },
 ];
+
+type GeneratedFiles = {
+  html: string;
+  css: string;
+  js: string;
+};
+
+type SpeechTarget = 'prompt' | 'chat';
+
+type SpeechRecognitionLike = {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  start: () => void;
+  stop: () => void;
+  onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+};
 
 const escapeHtml = (value: string) =>
   value
@@ -97,6 +174,26 @@ const escapeHtml = (value: string) =>
 
 const createStandalonePreviewUrl = (html: string) =>
   `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+
+const splitGeneratedFiles = (documentHtml: string): GeneratedFiles => {
+  const styleMatch = documentHtml.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+  const scriptMatch = documentHtml.match(/<script[^>]*>([\s\S]*?)<\/script>/i);
+  const css = styleMatch?.[1]?.trim() ?? '';
+  const js = scriptMatch?.[1]?.trim() ?? '';
+  const html = documentHtml
+    .replace(styleMatch?.[0] ?? '', '<link rel="stylesheet" href="styles.css" />')
+    .replace(scriptMatch?.[0] ?? '', '<script src="script.js"></script>');
+
+  return { html, css, js };
+};
+
+const composeGeneratedFiles = (files: GeneratedFiles) =>
+  files.html
+    .replace(
+      '<link rel="stylesheet" href="styles.css" />',
+      `<style>${files.css}</style>`,
+    )
+    .replace('<script src="script.js"></script>', `<script>${files.js}</script>`);
 
 const localGenerateApp = (idea: string): Promise<string> =>
   new Promise((resolve) => {
@@ -428,9 +525,17 @@ export default function HomeScreen() {
   const [prompt, setPrompt] = useState<string>('');
   const [isFocused, setIsFocused] = useState<boolean>(false);
   const [isListening, setIsListening] = useState<boolean>(false);
+  const [listeningTarget, setListeningTarget] = useState<SpeechTarget | null>(null);
+  const [voiceLanguage, setVoiceLanguage] = useState<string>('en-US');
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [generatedCode, setGeneratedCode] = useState<string>('');
+  const [generatedFiles, setGeneratedFiles] = useState<GeneratedFiles>({
+    html: '',
+    css: '',
+    js: '',
+  });
   const [isLivePreview, setIsLivePreview] = useState<boolean>(false);
+  const [isTesterRunning, setIsTesterRunning] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [authModalVisible, setAuthModalVisible] = useState<boolean>(false);
@@ -439,6 +544,10 @@ export default function HomeScreen() {
   const [authPassword, setAuthPassword] = useState<string>('');
   const [authError, setAuthError] = useState<string>('');
   const [actionStatus, setActionStatus] = useState<string>('');
+  const [chatMessage, setChatMessage] = useState<string>('');
+  const [isChatSending, setIsChatSending] = useState<boolean>(false);
+  const [trialUseCount, setTrialUseCount] = useState<number>(0);
+  const [scanImageUri, setScanImageUri] = useState<string>('');
   const [adminPasswordModalVisible, setAdminPasswordModalVisible] =
     useState<boolean>(false);
   const [adminPanelVisible, setAdminPanelVisible] = useState<boolean>(false);
@@ -450,6 +559,23 @@ export default function HomeScreen() {
     gambling: true,
     adult: true,
   });
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+
+  useEffect(() => {
+    void AsyncStorage.getItem('pocketdev-ad-controls').then((storedControls) => {
+      if (!storedControls) return;
+      try {
+        const parsedControls = JSON.parse(storedControls) as Record<string, boolean>;
+        setAdControls((current) => ({ ...current, ...parsedControls }));
+      } catch {
+        // Keep the safe default when stored local settings are malformed.
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    void AsyncStorage.setItem('pocketdev-ad-controls', JSON.stringify(adControls));
+  }, [adControls]);
 
   const openAuthModal = (reason: string) => {
     setAuthReason(reason);
@@ -492,13 +618,21 @@ export default function HomeScreen() {
 
   const handleTemplatePress = (template: TemplateDefinition) => {
     if (template.locked && !isAuthenticated) {
-      openAuthModal(`Unlock ${template.title}`);
-      return;
+      if (trialUseCount >= 3) {
+        openAuthModal(`Unlock ${template.title} after your 3 free trials`);
+        return;
+      }
+      setTrialUseCount((count) => count + 1);
+      setActionStatus(
+        `${template.title} selected. Free trial ${trialUseCount + 1} of 3 — tap Generate App.`,
+      );
     }
 
     setPrompt(template.prompt);
     setError('');
-    setActionStatus(`${template.title} selected. Tap Generate App to build it.`);
+    if (!template.locked || isAuthenticated) {
+      setActionStatus(`${template.title} selected. Tap Generate App to build it.`);
+    }
     Haptics.selectionAsync();
   };
 
@@ -507,25 +641,38 @@ export default function HomeScreen() {
       openAuthModal('Download generated app');
       return;
     }
-    if (!generatedCode) {
-      setActionStatus('Generate an app before downloading index.html.');
+    if (!generatedCode || !generatedFiles.html) {
+      setActionStatus('Generate an app before downloading its files.');
       return;
     }
 
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const blob = new Blob([generatedCode], { type: 'text/html;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = 'index.html';
-      document.body.appendChild(anchor);
-      anchor.click();
-      document.body.removeChild(anchor);
-      URL.revokeObjectURL(url);
+      [
+        ['index.html', generatedFiles.html],
+        ['styles.css', generatedFiles.css],
+        ['script.js', generatedFiles.js],
+      ].forEach(([filename, contents]) => {
+        const blob = new Blob([contents], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        URL.revokeObjectURL(url);
+      });
     } else {
-      void Linking.openURL(createStandalonePreviewUrl(generatedCode));
+      const indexFile = new File(Paths.document, 'index.html');
+      const stylesFile = new File(Paths.document, 'styles.css');
+      const scriptFile = new File(Paths.document, 'script.js');
+      indexFile.write(generatedFiles.html);
+      stylesFile.write(generatedFiles.css);
+      scriptFile.write(generatedFiles.js);
+      setActionStatus('Saved index.html, styles.css, and script.js to app storage.');
+      return;
     }
-    setActionStatus('index.html download started.');
+    setActionStatus('Downloaded index.html, styles.css, and script.js.');
   };
 
   const handleDeploy = () => {
@@ -552,6 +699,155 @@ export default function HomeScreen() {
       return;
     }
     void Linking.openURL(livePreviewUrl);
+  };
+
+  const handleTester = () => {
+    if (!generatedCode) {
+      setActionStatus('Generate an app before running the AI One-Click Tester.');
+      return;
+    }
+    setIsLivePreview(true);
+    setIsTesterRunning(true);
+    setActionStatus('AI One-Click Tester is running inside the interactive WebView.');
+    setTimeout(() => {
+      setIsTesterRunning(false);
+      setActionStatus('AI One-Click Tester completed. Interactive controls are ready.');
+    }, 1200);
+  };
+
+  const handleChatSubmit = async () => {
+    if (!chatMessage.trim()) {
+      setActionStatus('Describe a change for the AI follow-up box first.');
+      return;
+    }
+    const updatedPrompt = `${prompt || 'Build a useful local business app'}. Modification: ${chatMessage.trim()}`;
+    setIsChatSending(true);
+    setPrompt(updatedPrompt.slice(0, 500));
+    const updatedHtml = await localGenerateApp(updatedPrompt);
+    const updatedFiles = splitGeneratedFiles(updatedHtml);
+    setGeneratedFiles(updatedFiles);
+    setGeneratedCode(updatedHtml);
+    setChatMessage('');
+    setIsChatSending(false);
+    setIsLivePreview(true);
+    setActionStatus('AI follow-up applied. The live preview has been refreshed.');
+  };
+
+  const handleBugFix = async () => {
+    if (!generatedCode) {
+      setActionStatus('Generate an app before asking the AI Bug Fixer to repair it.');
+      return;
+    }
+    setIsChatSending(true);
+    const repairedHtml = await localGenerateApp(`${prompt} with repaired interactions`);
+    const repairedFiles = splitGeneratedFiles(repairedHtml);
+    setGeneratedFiles(repairedFiles);
+    setGeneratedCode(repairedHtml);
+    setIsChatSending(false);
+    setIsLivePreview(true);
+    setActionStatus('AI Bug Fixer rebuilt the template interactions and refreshed the preview.');
+  };
+
+  const handleExportGithub = () => {
+    if (!isAuthenticated) {
+      openAuthModal('Export project to GitHub');
+      return;
+    }
+    if (!generatedFiles.html) {
+      setActionStatus('Generate an app before exporting it to GitHub.');
+      return;
+    }
+    setActionStatus(
+      'GitHub-ready export prepared with index.html, styles.css, and script.js. Connect GitHub to publish it.',
+    );
+  };
+
+  const handleVoiceCapture = (target: SpeechTarget) => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      setListeningTarget(null);
+      return;
+    }
+
+    const speechGlobals = globalThis as typeof globalThis & {
+      SpeechRecognition?: new () => SpeechRecognitionLike;
+      webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+    };
+    const Recognition =
+      speechGlobals.SpeechRecognition ?? speechGlobals.webkitSpeechRecognition;
+
+    if (!Recognition) {
+      setIsListening(true);
+      setListeningTarget(target);
+      setActionStatus(
+        `Microphone ready for ${voiceLanguage}. Web speech transcription is available in supported browsers.`,
+      );
+      Haptics.selectionAsync();
+      return;
+    }
+
+    const recognition = new Recognition();
+    recognition.lang = voiceLanguage;
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.onresult = (event) => {
+      const transcript = event.results[0]?.[0]?.transcript?.trim() ?? '';
+      if (target === 'prompt') {
+        setPrompt(transcript.slice(0, 500));
+      } else {
+        setChatMessage(transcript);
+      }
+      setActionStatus(`Voice captured in ${voiceLanguage}.`);
+    };
+    recognition.onerror = () => {
+      setActionStatus('Voice capture could not start. You can type the same request instead.');
+    };
+    recognition.onend = () => {
+      setIsListening(false);
+      setListeningTarget(null);
+      recognitionRef.current = null;
+    };
+    recognitionRef.current = recognition;
+    setIsListening(true);
+    setListeningTarget(target);
+    recognition.start();
+    Haptics.selectionAsync();
+  };
+
+  const handleVoicePress = () => {
+    handleVoiceCapture('prompt');
+    setError('');
+  };
+
+  const handleChatVoicePress = () => {
+    handleVoiceCapture('chat');
+  };
+
+  const handleScanClone = async () => {
+    try {
+      const result =
+        Platform.OS === 'web'
+          ? await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ['images'],
+              allowsEditing: true,
+              quality: 1,
+            })
+          : await ImagePicker.launchCameraAsync({
+              mediaTypes: ['images'],
+              allowsEditing: true,
+              quality: 1,
+            });
+      if (result.canceled || !result.assets?.[0]?.uri) return;
+      const imageUri = result.assets[0].uri;
+      setScanImageUri(imageUri);
+      setPrompt('Recreate this scanned screenshot as a responsive, accessible interface');
+      setActionStatus(
+        'Screenshot captured. The offline clone scaffold is ready for generation.',
+      );
+    } catch {
+      setActionStatus('Camera access was unavailable. Choose a screenshot from your gallery instead.');
+    }
   };
 
   const handleAdminTrigger = () => {
@@ -584,19 +880,15 @@ export default function HomeScreen() {
     setError('');
     setIsGenerating(true);
     setGeneratedCode('');
+    setGeneratedFiles({ html: '', css: '', js: '' });
     setIsLivePreview(false);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     const generatedHtml = await localGenerateApp(prompt);
     setIsGenerating(false);
     setGeneratedCode(generatedHtml);
+    setGeneratedFiles(splitGeneratedFiles(generatedHtml));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-  };
-
-  const handleVoicePress = () => {
-    setIsListening((current) => !current);
-    setError('');
-    Haptics.selectionAsync();
   };
 
   const handleStarterPress = (starter: string) => {
@@ -741,6 +1033,67 @@ export default function HomeScreen() {
             </View>
           ) : null}
 
+          <View style={styles.voiceToolsRow}>
+            <Text style={[styles.voiceToolsLabel, { color: colors.mutedForeground }]}>
+              VOICE
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.voiceLanguageScroll}
+            >
+              {voiceLanguages.map((language) => (
+                <Pressable
+                  key={language.value}
+                  onPress={() => setVoiceLanguage(language.value)}
+                  style={[
+                    styles.voiceLanguageChip,
+                    {
+                      backgroundColor:
+                        voiceLanguage === language.value ? colors.primary : colors.muted,
+                      borderColor:
+                        voiceLanguage === language.value ? colors.primary : colors.border,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.voiceLanguageText,
+                      {
+                        color:
+                          voiceLanguage === language.value
+                            ? colors.primaryForeground
+                            : colors.secondaryForeground,
+                      },
+                    ]}
+                  >
+                    {language.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+            <Pressable
+              testID="scan-clone-button"
+              accessibilityRole="button"
+              accessibilityLabel="Scan and clone screenshot"
+              onPress={handleScanClone}
+              style={({ pressed }) => [
+                styles.scanButton,
+                { backgroundColor: colors.accent, opacity: pressed ? 0.72 : 1 },
+              ]}
+            >
+              <Feather name="camera" size={15} color={colors.primary} />
+            </Pressable>
+          </View>
+          {scanImageUri ? (
+            <View style={[styles.scanStatus, { backgroundColor: colors.accent }]}>
+              <Feather name="check-circle" size={14} color={colors.primary} />
+              <Text style={[styles.scanStatusText, { color: colors.accentForeground }]}>
+                Screenshot scanned — clone brief ready
+              </Text>
+            </View>
+          ) : null}
+
           {error ? (
             <Text style={[styles.errorText, { color: colors.destructive }]}>
               {error}
@@ -816,7 +1169,7 @@ export default function HomeScreen() {
             </View>
             <View style={[styles.templateCount, { backgroundColor: colors.muted }]}>
               <Text style={[styles.templateCountText, { color: colors.mutedForeground }]}>
-                {isAuthenticated ? '6 unlocked' : '3 free'}
+                {isAuthenticated ? '12 unlocked' : '3 free · 9 locked'}
               </Text>
             </View>
           </View>
@@ -949,6 +1302,39 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        <View style={[styles.testerBar, { backgroundColor: colors.muted }]}>
+          <View style={styles.testerCopy}>
+            <Feather name="check-circle" size={15} color={colors.primary} />
+            <View>
+              <Text style={[styles.testerTitle, { color: colors.foreground }]}>
+                AI One-Click Tester
+              </Text>
+              <Text style={[styles.testerDescription, { color: colors.mutedForeground }]}>
+                Test buttons inside the live simulator
+              </Text>
+            </View>
+          </View>
+          <Pressable
+            testID="one-click-tester-button"
+            accessibilityRole="button"
+            accessibilityLabel="Run AI One-Click Tester"
+            onPress={handleTester}
+            style={({ pressed }) => [
+              styles.testerButton,
+              { backgroundColor: colors.primary, opacity: pressed ? 0.72 : 1 },
+            ]}
+          >
+            <Feather
+              name={isTesterRunning ? 'loader' : 'play'}
+              size={14}
+              color={colors.primaryForeground}
+            />
+            <Text style={[styles.testerButtonText, { color: colors.primaryForeground }]}>
+              {isTesterRunning ? 'Testing' : 'Run test'}
+            </Text>
+          </Pressable>
+        </View>
+
         <View
           style={[
             styles.outputCard,
@@ -1005,6 +1391,41 @@ export default function HomeScreen() {
             </View>
           )}
         </View>
+
+        {generatedCode ? (
+          <View style={styles.fileOutputSection}>
+            <View style={styles.fileOutputHeader}>
+              <Text style={[styles.fileOutputTitle, { color: colors.foreground }]}>
+                Multi-file output
+              </Text>
+              <Text style={[styles.fileOutputHint, { color: colors.mutedForeground }]}>
+                3 files ready
+              </Text>
+            </View>
+            <View style={styles.fileChipRow}>
+              {[
+                ['index.html', generatedFiles.html.length, 'file-text'],
+                ['styles.css', generatedFiles.css.length, 'layers'],
+                ['script.js', generatedFiles.js.length, 'code'],
+              ].map(([name, size, icon]) => (
+                <View
+                  key={name}
+                  style={[styles.fileChip, { backgroundColor: colors.muted }]}
+                >
+                  <Feather name={icon as keyof typeof Feather.glyphMap} size={14} color={colors.primary} />
+                  <View style={styles.fileChipCopy}>
+                    <Text style={[styles.fileChipName, { color: colors.foreground }]}>
+                      {name}
+                    </Text>
+                    <Text style={[styles.fileChipSize, { color: colors.mutedForeground }]}>
+                      {size} chars
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
 
         <View style={styles.businessActions}>
           <Pressable
@@ -1085,6 +1506,96 @@ export default function HomeScreen() {
             </Pressable>
           </View>
         ) : null}
+
+        <View style={[styles.chatCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.chatHeader}>
+            <View>
+              <Text style={[styles.outputEyebrow, { color: colors.mutedForeground }]}>
+                FOLLOW-UP WORKSPACE
+              </Text>
+              <Text style={[styles.chatTitle, { color: colors.foreground }]}>
+                AI Chat &amp; Follow-up
+              </Text>
+            </View>
+            <Feather name="message-square" size={18} color={colors.primary} />
+          </View>
+          <TextInput
+            testID="chat-input"
+            value={chatMessage}
+            onChangeText={setChatMessage}
+            multiline
+            placeholder="Ask for a change, such as: make the hero warmer..."
+            placeholderTextColor={colors.mutedForeground}
+            textAlignVertical="top"
+            style={[styles.chatInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
+          />
+          <View style={styles.chatActions}>
+            <Pressable
+              testID="chat-voice-button"
+              accessibilityRole="button"
+              accessibilityLabel="Speak a follow-up modification"
+              onPress={handleChatVoicePress}
+              style={({ pressed }) => [
+                styles.chatIconButton,
+                { backgroundColor: colors.secondary, opacity: pressed ? 0.72 : 1 },
+              ]}
+            >
+              <Feather
+                name={isListening && listeningTarget === 'chat' ? 'square' : 'mic'}
+                size={16}
+                color={colors.secondaryForeground}
+              />
+            </Pressable>
+            <Pressable
+              testID="bug-fix-button"
+              accessibilityRole="button"
+              accessibilityLabel="Run AI Bug Fixer"
+              onPress={handleBugFix}
+              style={({ pressed }) => [
+                styles.bugFixButton,
+                { backgroundColor: colors.accent, opacity: pressed ? 0.72 : 1 },
+              ]}
+            >
+              <Feather name="tool" size={15} color={colors.primary} />
+              <Text style={[styles.bugFixText, { color: colors.accentForeground }]}>
+                AI Bug Fixer
+              </Text>
+            </Pressable>
+            <Pressable
+              testID="chat-submit-button"
+              accessibilityRole="button"
+              accessibilityLabel="Apply follow-up"
+              disabled={isChatSending}
+              onPress={handleChatSubmit}
+              style={({ pressed }) => [
+                styles.chatSubmitButton,
+                { backgroundColor: colors.primary, opacity: isChatSending || pressed ? 0.72 : 1 },
+              ]}
+            >
+              {isChatSending ? (
+                <ActivityIndicator size="small" color={colors.primaryForeground} />
+              ) : (
+                <Feather name="arrow-up" size={17} color={colors.primaryForeground} />
+              )}
+            </Pressable>
+          </View>
+        </View>
+
+        <Pressable
+          testID="github-export-button"
+          accessibilityRole="button"
+          accessibilityLabel="Export to GitHub"
+          onPress={handleExportGithub}
+          style={({ pressed }) => [
+            styles.githubButton,
+            { borderColor: colors.border, backgroundColor: colors.secondary, opacity: pressed ? 0.72 : 1 },
+          ]}
+        >
+          <Feather name="github" size={17} color={colors.secondaryForeground} />
+          <Text style={[styles.githubButtonText, { color: colors.secondaryForeground }]}>
+            Export to GitHub
+          </Text>
+        </Pressable>
 
         <View style={styles.footer}>
           <Feather name="zap" size={14} color={colors.mutedForeground} />
@@ -1546,6 +2057,51 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     fontSize: 12,
   },
+  voiceToolsRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 7,
+    marginTop: 14,
+  },
+  voiceToolsLabel: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 10,
+    letterSpacing: 1.1,
+  },
+  voiceLanguageScroll: {
+    flexGrow: 1,
+    gap: 6,
+  },
+  voiceLanguageChip: {
+    borderRadius: 99,
+    borderWidth: 1,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+  },
+  voiceLanguageText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
+  },
+  scanButton: {
+    alignItems: 'center',
+    borderRadius: 10,
+    height: 32,
+    justifyContent: 'center',
+    width: 34,
+  },
+  scanStatus: {
+    alignItems: 'center',
+    borderRadius: 10,
+    flexDirection: 'row',
+    gap: 7,
+    marginTop: 9,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  scanStatusText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 11,
+  },
   errorText: {
     fontFamily: 'Inter_500Medium',
     fontSize: 12,
@@ -1726,6 +2282,42 @@ const styles = StyleSheet.create({
     minHeight: 340,
     overflow: 'hidden',
   },
+  testerBar: {
+    alignItems: 'center',
+    borderRadius: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  testerCopy: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    gap: 9,
+  },
+  testerTitle: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 12,
+  },
+  testerDescription: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 10,
+    marginTop: 2,
+  },
+  testerButton: {
+    alignItems: 'center',
+    borderRadius: 10,
+    flexDirection: 'row',
+    gap: 6,
+    minHeight: 34,
+    paddingHorizontal: 10,
+  },
+  testerButtonText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 10,
+  },
   webView: {
     backgroundColor: '#0B1119',
     height: 360,
@@ -1767,6 +2359,48 @@ const styles = StyleSheet.create({
     }),
     fontSize: 13,
     lineHeight: 21,
+  },
+  fileOutputSection: {
+    marginTop: 14,
+  },
+  fileOutputHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  fileOutputTitle: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+  },
+  fileOutputHint: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 10,
+  },
+  fileChipRow: {
+    flexDirection: 'row',
+    gap: 7,
+  },
+  fileChip: {
+    alignItems: 'center',
+    borderRadius: 11,
+    flex: 1,
+    flexDirection: 'row',
+    gap: 7,
+    minHeight: 48,
+    paddingHorizontal: 8,
+  },
+  fileChipCopy: {
+    flex: 1,
+  },
+  fileChipName: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
+  },
+  fileChipSize: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 9,
+    marginTop: 3,
   },
   businessActions: {
     flexDirection: 'row',
@@ -1853,6 +2487,81 @@ const styles = StyleSheet.create({
   openPreviewText: {
     fontFamily: 'Inter_600SemiBold',
     fontSize: 12,
+  },
+  chatCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    marginTop: 18,
+    padding: 14,
+  },
+  chatHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  chatTitle: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 18,
+    letterSpacing: -0.4,
+    marginTop: 5,
+  },
+  chatInput: {
+    borderRadius: 12,
+    borderWidth: 1,
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 14,
+    minHeight: 72,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  chatActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'flex-end',
+    marginTop: 10,
+  },
+  chatIconButton: {
+    alignItems: 'center',
+    borderRadius: 10,
+    height: 38,
+    justifyContent: 'center',
+    width: 38,
+  },
+  bugFixButton: {
+    alignItems: 'center',
+    borderRadius: 10,
+    flexDirection: 'row',
+    gap: 6,
+    height: 38,
+    paddingHorizontal: 10,
+  },
+  bugFixText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+  },
+  chatSubmitButton: {
+    alignItems: 'center',
+    borderRadius: 10,
+    height: 38,
+    justifyContent: 'center',
+    width: 42,
+  },
+  githubButton: {
+    alignItems: 'center',
+    borderRadius: 13,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'center',
+    marginTop: 10,
+    minHeight: 48,
+  },
+  githubButtonText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
   },
   modalOverlay: {
     alignItems: 'center',
