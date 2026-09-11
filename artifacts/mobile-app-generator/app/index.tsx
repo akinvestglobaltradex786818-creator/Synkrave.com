@@ -1,5 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import * as Linking from 'expo-linking';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { createElement, useState } from 'react';
@@ -37,99 +38,51 @@ type TemplateDefinition = {
 
 const templateCatalog: TemplateDefinition[] = [
   {
-    id: 'profile',
-    title: 'Profile card',
-    description: 'A focused personal profile',
-    prompt: 'A polished profile card for a product designer',
-    icon: 'user',
+    id: 'corporate',
+    title: 'Corporate Business Site',
+    description: 'A polished company presence',
+    prompt: 'A corporate business website with services, trust signals, and contact CTA',
+    icon: 'briefcase',
     locked: false,
   },
   {
-    id: 'login',
-    title: 'Login screen',
-    description: 'A clean authentication flow',
-    prompt: 'A modern login and registration screen',
-    icon: 'log-in',
-    locked: false,
-  },
-  {
-    id: 'button',
-    title: 'CTA buttons',
-    description: 'A compact interaction kit',
-    prompt: 'A button showcase with primary and secondary CTAs',
-    icon: 'mouse-pointer',
-    locked: false,
-  },
-  {
-    id: 'analytics',
-    title: 'Analytics dashboard',
-    description: 'Metrics, trends, and reporting',
-    prompt: 'An analytics dashboard with traffic charts and KPIs',
+    id: 'financial',
+    title: 'Financial Dashboard',
+    description: 'A clear view of business performance',
+    prompt: 'A financial dashboard with revenue, cash flow, and performance KPIs',
     icon: 'bar-chart-2',
-    locked: true,
+    locked: false,
   },
   {
-    id: 'tasks',
-    title: 'Task manager',
-    description: 'Projects, tasks, and focus',
-    prompt: 'A professional task manager with projects and priorities',
-    icon: 'check-square',
-    locked: true,
-  },
-  {
-    id: 'pricing',
-    title: 'Pricing page',
-    description: 'Plans built for conversion',
-    prompt: 'A professional pricing page with monthly plans',
-    icon: 'credit-card',
-    locked: true,
-  },
-  {
-    id: 'landing',
-    title: 'Marketing landing',
-    description: 'A launch-ready hero layout',
-    prompt: 'A polished marketing landing page with a waitlist',
-    icon: 'globe',
-    locked: true,
-  },
-  {
-    id: 'storefront',
-    title: 'E-commerce storefront',
-    description: 'Catalog, products, and checkout',
-    prompt: 'An e-commerce storefront with featured products',
+    id: 'ecommerce',
+    title: 'E-commerce Store',
+    description: 'Products, offers, and conversion',
+    prompt: 'An e-commerce store with featured products and a shopping CTA',
     icon: 'shopping-bag',
+    locked: false,
+  },
+  {
+    id: 'real-estate',
+    title: 'Real Estate Portal',
+    description: 'Listings and property discovery',
+    prompt: 'A real estate portal with property listings and search filters',
+    icon: 'home',
     locked: true,
   },
   {
-    id: 'crm',
-    title: 'CRM pipeline',
-    description: 'Leads and customer stages',
-    prompt: 'A CRM pipeline dashboard for managing leads',
-    icon: 'users',
+    id: 'education',
+    title: 'Educational Portal',
+    description: 'Courses, lessons, and progress',
+    prompt: 'An educational portal with courses, lessons, and learner progress',
+    icon: 'book-open',
     locked: true,
   },
   {
-    id: 'calendar',
-    title: 'Booking calendar',
-    description: 'Availability and appointments',
-    prompt: 'A booking calendar for appointments and availability',
-    icon: 'calendar',
-    locked: true,
-  },
-  {
-    id: 'community',
-    title: 'Community feed',
-    description: 'Posts, reactions, and updates',
-    prompt: 'A social community feed with posts and reactions',
-    icon: 'message-circle',
-    locked: true,
-  },
-  {
-    id: 'admin',
-    title: 'Admin control center',
-    description: 'Controls for an operations team',
-    prompt: 'An admin control center with operational overview',
-    icon: 'shield',
+    id: 'custom',
+    title: 'Other / Custom Blueprint',
+    description: 'Start from your own brief',
+    prompt: 'A custom business app based on my requirements',
+    icon: 'layers',
     locked: true,
   },
 ];
@@ -141,6 +94,9 @@ const escapeHtml = (value: string) =>
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+
+const createStandalonePreviewUrl = (html: string) =>
+  `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
 
 const localGenerateApp = (idea: string): Promise<string> =>
   new Promise((resolve) => {
@@ -238,6 +194,24 @@ function buildLocalApp(idea: string): string {
 
   let templateKey: string;
   switch (true) {
+    case /corporate|business site|company|services|website/.test(normalizedIdea):
+      templateKey = 'landing';
+      break;
+    case /financial|finance|revenue|cash flow|kpi/.test(normalizedIdea):
+      templateKey = 'dashboard';
+      break;
+    case /e-commerce|ecommerce|store|shop|product catalog/.test(normalizedIdea):
+      templateKey = 'pricing';
+      break;
+    case /real estate|property|listing|home search/.test(normalizedIdea):
+      templateKey = 'card';
+      break;
+    case /education|educational|course|lesson|learning|school/.test(normalizedIdea):
+      templateKey = 'tasks';
+      break;
+    case /custom|other/.test(normalizedIdea):
+      templateKey = 'card';
+      break;
     case /profile|team|portfolio/.test(normalizedIdea):
       templateKey = 'profile';
       break;
@@ -470,6 +444,7 @@ export default function HomeScreen() {
   const [adminPanelVisible, setAdminPanelVisible] = useState<boolean>(false);
   const [adminPassword, setAdminPassword] = useState<string>('');
   const [adminError, setAdminError] = useState<string>('');
+  const [livePreviewUrl, setLivePreviewUrl] = useState<string>('');
   const [adControls, setAdControls] = useState<Record<string, boolean>>({
     interest: true,
     gambling: true,
@@ -532,7 +507,25 @@ export default function HomeScreen() {
       openAuthModal('Download generated app');
       return;
     }
-    setActionStatus('Download prepared offline. Your generated file is index.html.');
+    if (!generatedCode) {
+      setActionStatus('Generate an app before downloading index.html.');
+      return;
+    }
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const blob = new Blob([generatedCode], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = 'index.html';
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+    } else {
+      void Linking.openURL(createStandalonePreviewUrl(generatedCode));
+    }
+    setActionStatus('index.html download started.');
   };
 
   const handleDeploy = () => {
@@ -540,7 +533,25 @@ export default function HomeScreen() {
       openAuthModal('Deploy generated app');
       return;
     }
-    setActionStatus('Deployment prepared offline. Connect a hosting provider to publish.');
+    if (!generatedCode) {
+      setActionStatus('Generate an app before deploying it.');
+      return;
+    }
+
+    const previewUrl = createStandalonePreviewUrl(generatedCode);
+    setLivePreviewUrl(previewUrl);
+    setActionStatus(
+      'Standalone live preview created. Copy the link to open the generated app in any browser.',
+    );
+  };
+
+  const openLivePreview = () => {
+    if (!livePreviewUrl) return;
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.open(livePreviewUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    void Linking.openURL(livePreviewUrl);
   };
 
   const handleAdminTrigger = () => {
@@ -805,7 +816,7 @@ export default function HomeScreen() {
             </View>
             <View style={[styles.templateCount, { backgroundColor: colors.muted }]}>
               <Text style={[styles.templateCountText, { color: colors.mutedForeground }]}>
-                {isAuthenticated ? '12 unlocked' : '3 free'}
+                {isAuthenticated ? '6 unlocked' : '3 free'}
               </Text>
             </View>
           </View>
@@ -1034,6 +1045,46 @@ export default function HomeScreen() {
             </Text>
           </Pressable>
         </View>
+
+        {livePreviewUrl ? (
+          <View style={[styles.liveLinkCard, { backgroundColor: colors.accent }]}>
+            <View style={styles.liveLinkHeader}>
+              <View style={styles.liveLinkTitleRow}>
+                <Feather name="globe" size={15} color={colors.primary} />
+                <Text style={[styles.liveLinkTitle, { color: colors.foreground }]}>
+                  Live preview URL
+                </Text>
+              </View>
+              <View style={[styles.liveLinkBadge, { backgroundColor: colors.primary }]}>
+                <Text style={[styles.liveLinkBadgeText, { color: colors.primaryForeground }]}>
+                  READY
+                </Text>
+              </View>
+            </View>
+            <Text
+              selectable
+              numberOfLines={2}
+              style={[styles.liveLinkUrl, { color: colors.mutedForeground }]}
+            >
+              {livePreviewUrl}
+            </Text>
+            <Pressable
+              testID="open-live-preview-button"
+              accessibilityRole="link"
+              accessibilityLabel="Open standalone live preview"
+              onPress={openLivePreview}
+              style={({ pressed }) => [
+                styles.openPreviewButton,
+                { backgroundColor: colors.secondary, opacity: pressed ? 0.72 : 1 },
+              ]}
+            >
+              <Feather name="external-link" size={15} color={colors.primary} />
+              <Text style={[styles.openPreviewText, { color: colors.secondaryForeground }]}>
+                Open standalone preview
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
 
         <View style={styles.footer}>
           <Feather name="zap" size={14} color={colors.mutedForeground} />
@@ -1750,6 +1801,58 @@ const styles = StyleSheet.create({
   primaryActionText: {
     fontFamily: 'Inter_700Bold',
     fontSize: 11,
+  },
+  liveLinkCard: {
+    borderRadius: 14,
+    marginTop: 12,
+    padding: 14,
+  },
+  liveLinkHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  liveLinkTitleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  liveLinkTitle: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
+  },
+  liveLinkBadge: {
+    borderRadius: 99,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+  liveLinkBadgeText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 9,
+    letterSpacing: 0.7,
+  },
+  liveLinkUrl: {
+    fontFamily: Platform.select({
+      ios: 'Menlo',
+      android: 'monospace',
+      default: 'monospace',
+    }),
+    fontSize: 10,
+    lineHeight: 15,
+    marginTop: 11,
+  },
+  openPreviewButton: {
+    alignItems: 'center',
+    borderRadius: 10,
+    flexDirection: 'row',
+    gap: 7,
+    justifyContent: 'center',
+    marginTop: 12,
+    minHeight: 40,
+  },
+  openPreviewText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 12,
   },
   modalOverlay: {
     alignItems: 'center',
