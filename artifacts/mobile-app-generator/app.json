@@ -1,18 +1,18 @@
 {
   "expo": {
-    "name": "PocketDev AI",
-    "slug": "pocketdevai",
+    "name": "synkrave",
+    "slug": "synkrave",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "pocketdevai",
+    "scheme": "synkrave",
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.pocketdevai.app"
+      "bundleIdentifier": "com.synkrave.app"
     },
     "android": {
-      "package": "com.pocketdevai.app",
+      "package": "com.synkrave.app",
       "versionCode": 1,
       "permissions": [
         "CAMERA",
@@ -22,10 +22,10 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.pocketdevai.app",
+      "bundleIdentifier": "com.synkrave.app",
       "infoPlist": {
         "NSCameraUsageDescription": "PocketDev AI uses the camera to scan screenshots for the Scan & Clone tool.",
-        "NSMicrophoneUsageDescription": "PocketDev AI uses the microphone for multilingual voice-to-code prompts."
+        "NSMicrophoneUsageDescription": "synkrave uses the microphone for multilingual voice-to-code prompts."
       }
     },
     "web": {
