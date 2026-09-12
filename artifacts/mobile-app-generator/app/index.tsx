@@ -1,12 +1,12 @@
-import { Feather } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { File, Paths } from 'expo-file-system';
-import * as Haptics from 'expo-haptics';
-import * as ImagePicker from 'expo-image-picker';
-import * as Linking from 'expo-linking';
-import { LinearGradient } from 'expo-linear-gradient';
-import { StatusBar } from 'expo-status-bar';
-import { createElement, useEffect, useRef, useState } from 'react';
+import { Feather } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { File, Paths } from "expo-file-system";
+import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
+import * as Linking from "expo-linking";
+import { LinearGradient } from "expo-linear-gradient";
+import { StatusBar } from "expo-status-bar";
+import { createElement, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Keyboard,
@@ -19,22 +19,22 @@ import {
   Text,
   TextInput,
   View,
-} from 'react-native';
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import { WebView } from 'react-native-webview';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useColors } from '@/hooks/useColors';
+} from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { WebView } from "react-native-webview";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useColors } from "@/hooks/useColors";
 
 const starterPrompts = [
-  'A habit tracker with streaks',
-  'A recipe planner for busy weeks',
+  "A habit tracker with streaks",
+  "A recipe planner fkor busy weeks",
 ];
 
 const voiceLanguages = [
-  { label: 'English', value: 'en-US' },
-  { label: 'اردو', value: 'ur-PK' },
-  { label: 'پښتو', value: 'ps-AF' },
-  { label: '中文', value: 'zh-CN' },
+  { label: "English", value: "en-US" },
+  { label: "اردو", value: "ur-PK" },
+  { label: "پښتو", value: "ps-AF" },
+  { label: "中文", value: "zh-CN" },
 ];
 
 type TemplateDefinition = {
@@ -48,99 +48,106 @@ type TemplateDefinition = {
 
 const templateCatalog: TemplateDefinition[] = [
   {
-    id: 'tailor',
-    title: 'Local Tailor Shop Website',
-    description: 'Services, fittings, and contact',
-    prompt: 'A local tailor shop website with services, pricing, and booking CTA',
-    icon: 'scissors',
+    id: "tailor",
+    title: "Local Tailor Shop Website",
+    description: "Services, fittings, and contact",
+    prompt:
+      "A local tailor shop website with services, pricing, and booking CTA",
+    icon: "scissors",
     locked: false,
   },
   {
-    id: 'barber',
-    title: 'Barber Shop Page',
-    description: 'Cuts, hours, and appointments',
-    prompt: 'A barber shop page with services, opening hours, and appointment CTA',
-    icon: 'user',
+    id: "barber",
+    title: "Barber Shop Page",
+    description: "Cuts, hours, and appointments",
+    prompt:
+      "A barber shop page with services, opening hours, and appointment CTA",
+    icon: "user",
     locked: false,
   },
   {
-    id: 'grocery',
-    title: 'Simple Grocery Store',
-    description: 'Fresh products and local delivery',
-    prompt: 'A simple grocery store website with products and local delivery CTA',
-    icon: 'shopping-bag',
+    id: "grocery",
+    title: "Simple Grocery Store",
+    description: "Fresh products and local delivery",
+    prompt:
+      "A simple grocery store website with products and local delivery CTA",
+    icon: "shopping-bag",
     locked: false,
   },
   {
-    id: 'corporate',
-    title: 'Corporate Business Site',
-    description: 'Enterprise services and trust signals',
-    prompt: 'A corporate business website with services, trust signals, and contact CTA',
-    icon: 'briefcase',
+    id: "corporate",
+    title: "Corporate Business Site",
+    description: "Enterprise services and trust signals",
+    prompt:
+      "A corporate business website with services, trust signals, and contact CTA",
+    icon: "briefcase",
     locked: true,
   },
   {
-    id: 'financial',
-    title: 'Financial Dashboard',
-    description: 'Revenue, cash flow, and performance KPIs',
-    prompt: 'A financial dashboard with revenue, cash flow, and performance KPIs',
-    icon: 'bar-chart-2',
+    id: "financial",
+    title: "Financial Dashboard",
+    description: "Revenue, cash flow, and performance KPIs",
+    prompt:
+      "A financial dashboard with revenue, cash flow, and performance KPIs",
+    icon: "bar-chart-2",
     locked: true,
   },
   {
-    id: 'ecommerce',
-    title: 'E-commerce Store',
-    description: 'Products, offers, and conversion',
-    prompt: 'An e-commerce store with featured products and a shopping CTA',
-    icon: 'shopping-bag',
+    id: "ecommerce",
+    title: "E-commerce Store",
+    description: "Products, offers, and conversion",
+    prompt: "An e-commerce store with featured products and a shopping CTA",
+    icon: "shopping-bag",
     locked: true,
   },
   {
-    id: 'real-estate',
-    title: 'Real Estate Portal',
-    description: 'Listings and property discovery',
-    prompt: 'A real estate portal with property listings and search filters',
-    icon: 'home',
+    id: "real-estate",
+    title: "Real Estate Portal",
+    description: "Listings and property discovery",
+    prompt: "A real estate portal with property listings and search filters",
+    icon: "home",
     locked: true,
   },
   {
-    id: 'education',
-    title: 'Educational LMS Portal',
-    description: 'Courses, lessons, and learner progress',
-    prompt: 'An educational LMS portal with courses, lessons, and learner progress',
-    icon: 'book-open',
+    id: "education",
+    title: "Educational LMS Portal",
+    description: "Courses, lessons, and learner progress",
+    prompt:
+      "An educational LMS portal with courses, lessons, and learner progress",
+    icon: "book-open",
     locked: true,
   },
   {
-    id: 'startup',
-    title: 'Tech Startup Landing',
-    description: 'A launch-ready product story',
-    prompt: 'A tech startup landing page with product benefits and waitlist',
-    icon: 'zap',
+    id: "startup",
+    title: "Tech Startup Landing",
+    description: "A launch-ready product story",
+    prompt: "A tech startup landing page with product benefits and waitlist",
+    icon: "zap",
     locked: true,
   },
   {
-    id: 'secure-login',
-    title: 'Modern Secure Login',
-    description: 'A polished authentication flow',
-    prompt: 'A modern secure login screen with registration and password recovery',
-    icon: 'lock',
+    id: "secure-login",
+    title: "Modern Secure Login",
+    description: "A polished authentication flow",
+    prompt:
+      "A modern secure login screen with registration and password recovery",
+    icon: "lock",
     locked: true,
   },
   {
-    id: 'pricing',
-    title: 'Interactive Pricing Plan',
-    description: 'Plans designed for conversion',
-    prompt: 'An interactive pricing plan with selectable subscription tiers',
-    icon: 'credit-card',
+    id: "pricing",
+    title: "Interactive Pricing Plan",
+    description: "Plans designed for conversion",
+    prompt: "An interactive pricing plan with selectable subscription tiers",
+    icon: "credit-card",
     locked: true,
   },
   {
-    id: 'custom',
-    title: 'Custom Blueprint',
-    description: 'Start from your own product brief',
-    prompt: 'A custom app based on my requirements',
-    icon: 'layers',
+    id: "custom",
+    title: "Custom Blueprint",
+    description: "Start from your own product brief",
+    prompt: "A custom app based on my requirements",
+    icon: "layers",
     locked: true,
   },
 ];
@@ -151,7 +158,7 @@ type GeneratedFiles = {
   js: string;
 };
 
-type SpeechTarget = 'prompt' | 'chat';
+type SpeechTarget = "prompt" | "chat";
 
 type SpeechRecognitionLike = {
   lang: string;
@@ -159,18 +166,22 @@ type SpeechRecognitionLike = {
   interimResults: boolean;
   start: () => void;
   stop: () => void;
-  onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  onresult:
+    | ((event: {
+        results: ArrayLike<ArrayLike<{ transcript: string }>>;
+      }) => void)
+    | null;
   onerror: (() => void) | null;
   onend: (() => void) | null;
 };
 
 const escapeHtml = (value: string) =>
   value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 
 const createStandalonePreviewUrl = (html: string) =>
   `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
@@ -178,11 +189,14 @@ const createStandalonePreviewUrl = (html: string) =>
 const splitGeneratedFiles = (documentHtml: string): GeneratedFiles => {
   const styleMatch = documentHtml.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
   const scriptMatch = documentHtml.match(/<script[^>]*>([\s\S]*?)<\/script>/i);
-  const css = styleMatch?.[1]?.trim() ?? '';
-  const js = scriptMatch?.[1]?.trim() ?? '';
+  const css = styleMatch?.[1]?.trim() ?? "";
+  const js = scriptMatch?.[1]?.trim() ?? "";
   const html = documentHtml
-    .replace(styleMatch?.[0] ?? '', '<link rel="stylesheet" href="styles.css" />')
-    .replace(scriptMatch?.[0] ?? '', '<script src="script.js"></script>');
+    .replace(
+      styleMatch?.[0] ?? "",
+      '<link rel="stylesheet" href="styles.css" />',
+    )
+    .replace(scriptMatch?.[0] ?? "", '<script src="script.js"></script>');
 
   return { html, css, js };
 };
@@ -193,7 +207,10 @@ const composeGeneratedFiles = (files: GeneratedFiles) =>
       '<link rel="stylesheet" href="styles.css" />',
       `<style>${files.css}</style>`,
     )
-    .replace('<script src="script.js"></script>', `<script>${files.js}</script>`);
+    .replace(
+      '<script src="script.js"></script>',
+      `<script>${files.js}</script>`,
+    );
 
 const localGenerateApp = (idea: string): Promise<string> =>
   new Promise((resolve) => {
@@ -203,8 +220,8 @@ const localGenerateApp = (idea: string): Promise<string> =>
 function buildLocalApp(idea: string): string {
   const normalizedIdea = idea.toLowerCase();
   const safeIdea = escapeHtml(
-    idea.replace(/\s+/g, ' ').trim().slice(0, 90) ||
-      'A simple generated text card',
+    idea.replace(/\s+/g, " ").trim().slice(0, 90) ||
+      "A simple generated text card",
   );
   const sharedStyles = `
       * { box-sizing: border-box; }
@@ -291,53 +308,57 @@ function buildLocalApp(idea: string): string {
 
   let templateKey: string;
   switch (true) {
-    case /corporate|business site|company|services|website/.test(normalizedIdea):
-      templateKey = 'landing';
+    case /corporate|business site|company|services|website/.test(
+      normalizedIdea,
+    ):
+      templateKey = "landing";
       break;
     case /financial|finance|revenue|cash flow|kpi/.test(normalizedIdea):
-      templateKey = 'dashboard';
+      templateKey = "dashboard";
       break;
     case /e-commerce|ecommerce|store|shop|product catalog/.test(normalizedIdea):
-      templateKey = 'pricing';
+      templateKey = "pricing";
       break;
     case /real estate|property|listing|home search/.test(normalizedIdea):
-      templateKey = 'card';
+      templateKey = "card";
       break;
-    case /education|educational|course|lesson|learning|school/.test(normalizedIdea):
-      templateKey = 'tasks';
+    case /education|educational|course|lesson|learning|school/.test(
+      normalizedIdea,
+    ):
+      templateKey = "tasks";
       break;
     case /custom|other/.test(normalizedIdea):
-      templateKey = 'card';
+      templateKey = "card";
       break;
     case /profile|team|portfolio/.test(normalizedIdea):
-      templateKey = 'profile';
+      templateKey = "profile";
       break;
     case /login|sign in|signin|register|signup|auth/.test(normalizedIdea):
-      templateKey = 'login';
+      templateKey = "login";
       break;
     case /dashboard|analytics|admin|overview/.test(normalizedIdea):
-      templateKey = 'dashboard';
+      templateKey = "dashboard";
       break;
     case /button|cta|call to action/.test(normalizedIdea):
-      templateKey = 'button';
+      templateKey = "button";
       break;
     case /todo|to-do|task|habit/.test(normalizedIdea):
-      templateKey = 'tasks';
+      templateKey = "tasks";
       break;
     case /pricing|subscription|plan/.test(normalizedIdea):
-      templateKey = 'pricing';
+      templateKey = "pricing";
       break;
     case /landing|hero|waitlist/.test(normalizedIdea):
-      templateKey = 'landing';
+      templateKey = "landing";
       break;
     default:
-      templateKey = 'card';
+      templateKey = "card";
   }
 
   switch (templateKey) {
-    case 'profile':
+    case "profile":
       return page(
-        'Profile Card',
+        "Profile Card",
         `
       .avatar { display: grid; width: 72px; height: 72px; margin-bottom: 22px; place-items: center; border-radius: 24px; background: linear-gradient(135deg, #6ee7f9, #8b7cff); color: #071016; font-size: 22px; font-weight: 800; }
       .meta { display: flex; gap: 8px; margin-bottom: 24px; }`,
@@ -358,9 +379,9 @@ function buildLocalApp(idea: string): string {
         status.textContent = following ? 'You unfollowed Alex.' : 'You are now following Alex.';
       });`,
       );
-    case 'login':
+    case "login":
       return page(
-        'Welcome Back',
+        "Welcome Back",
         `
       .form-copy { margin-bottom: 26px; }
       .form-copy p { margin-bottom: 0; }
@@ -382,9 +403,9 @@ function buildLocalApp(idea: string): string {
         document.querySelector('#status').textContent = 'Signed in successfully — welcome back.';
       });`,
       );
-    case 'dashboard':
+    case "dashboard":
       return page(
-        'Project Dashboard',
+        "Project Dashboard",
         `
       .dashboard-head { margin-bottom: 24px; }
       .grid { margin-bottom: 20px; }
@@ -404,9 +425,9 @@ function buildLocalApp(idea: string): string {
         document.querySelector('#status').textContent = 'New project draft created.';
       });`,
       );
-    case 'button':
+    case "button":
       return page(
-        'Button Showcase',
+        "Button Showcase",
         `
       .button-stack { display: grid; gap: 12px; margin-top: 24px; }
       .secondary { background: #253849; color: #d6e3f0; }
@@ -428,9 +449,9 @@ function buildLocalApp(idea: string): string {
         });
       });`,
       );
-    case 'tasks':
+    case "tasks":
       return page(
-        'Task List',
+        "Task List",
         `
       form { display: flex; gap: 8px; }
       form input { flex: 1; margin: 0; }
@@ -461,9 +482,9 @@ function buildLocalApp(idea: string): string {
         input.value = '';
       });`,
       );
-    case 'pricing':
+    case "pricing":
       return page(
-        'Pricing Card',
+        "Pricing Card",
         `
       .price { margin: 8px 0 18px; font-size: 48px; font-weight: 800; letter-spacing: -0.06em; }
       .price span { color: #a9b5c5; font-size: 14px; font-weight: 400; letter-spacing: 0; }
@@ -480,9 +501,9 @@ function buildLocalApp(idea: string): string {
         document.querySelector('#status').textContent = 'Starter plan selected.';
       });`,
       );
-    case 'landing':
+    case "landing":
       return page(
-        'Landing Page',
+        "Landing Page",
         `
       .shell { text-align: center; }
       h1 { font-size: 42px; }
@@ -499,10 +520,10 @@ function buildLocalApp(idea: string): string {
         document.querySelector('#status').textContent = 'Thanks — we will be in touch.';
       });`,
       );
-    case 'card':
+    case "card":
     default:
       return page(
-        'Generated App',
+        "Generated App",
         `.card-label { display: inline-block; margin-bottom: 16px; color: #6ee7f9; font-weight: 700; }`,
         `<main class="shell">
       <span class="card-label">Offline starter</span>
@@ -522,38 +543,42 @@ function buildLocalApp(idea: string): string {
 export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const [prompt, setPrompt] = useState<string>('');
+  const [prompt, setPrompt] = useState<string>("");
   const [isFocused, setIsFocused] = useState<boolean>(false);
   const [isListening, setIsListening] = useState<boolean>(false);
-  const [listeningTarget, setListeningTarget] = useState<SpeechTarget | null>(null);
-  const [voiceLanguage, setVoiceLanguage] = useState<string>('en-US');
+  const [listeningTarget, setListeningTarget] = useState<SpeechTarget | null>(
+    null,
+  );
+  const [voiceLanguage, setVoiceLanguage] = useState<string>("en-US");
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
-  const [generatedCode, setGeneratedCode] = useState<string>('');
+  const [generatedCode, setGeneratedCode] = useState<string>("");
   const [generatedFiles, setGeneratedFiles] = useState<GeneratedFiles>({
-    html: '',
-    css: '',
-    js: '',
+    html: "",
+    css: "",
+    js: "",
   });
   const [isLivePreview, setIsLivePreview] = useState<boolean>(false);
   const [isTesterRunning, setIsTesterRunning] = useState<boolean>(false);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<string>("");
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [authModalVisible, setAuthModalVisible] = useState<boolean>(false);
-  const [authReason, setAuthReason] = useState<string>('Unlock professional templates');
-  const [authEmail, setAuthEmail] = useState<string>('');
-  const [authPassword, setAuthPassword] = useState<string>('');
-  const [authError, setAuthError] = useState<string>('');
-  const [actionStatus, setActionStatus] = useState<string>('');
-  const [chatMessage, setChatMessage] = useState<string>('');
+  const [authReason, setAuthReason] = useState<string>(
+    "Unlock professional templates",
+  );
+  const [authEmail, setAuthEmail] = useState<string>("");
+  const [authPassword, setAuthPassword] = useState<string>("");
+  const [authError, setAuthError] = useState<string>("");
+  const [actionStatus, setActionStatus] = useState<string>("");
+  const [chatMessage, setChatMessage] = useState<string>("");
   const [isChatSending, setIsChatSending] = useState<boolean>(false);
   const [trialUseCount, setTrialUseCount] = useState<number>(0);
-  const [scanImageUri, setScanImageUri] = useState<string>('');
+  const [scanImageUri, setScanImageUri] = useState<string>("");
   const [adminPasswordModalVisible, setAdminPasswordModalVisible] =
     useState<boolean>(false);
   const [adminPanelVisible, setAdminPanelVisible] = useState<boolean>(false);
-  const [adminPassword, setAdminPassword] = useState<string>('');
-  const [adminError, setAdminError] = useState<string>('');
-  const [livePreviewUrl, setLivePreviewUrl] = useState<string>('');
+  const [adminPassword, setAdminPassword] = useState<string>("");
+  const [adminError, setAdminError] = useState<string>("");
+  const [livePreviewUrl, setLivePreviewUrl] = useState<string>("");
   const [adControls, setAdControls] = useState<Record<string, boolean>>({
     interest: true,
     gambling: true,
@@ -562,24 +587,32 @@ export default function HomeScreen() {
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   useEffect(() => {
-    void AsyncStorage.getItem('pocketdev-ad-controls').then((storedControls) => {
-      if (!storedControls) return;
-      try {
-        const parsedControls = JSON.parse(storedControls) as Record<string, boolean>;
-        setAdControls((current) => ({ ...current, ...parsedControls }));
-      } catch {
-        // Keep the safe default when stored local settings are malformed.
-      }
-    });
+    void AsyncStorage.getItem("pocketdev-ad-controls").then(
+      (storedControls) => {
+        if (!storedControls) return;
+        try {
+          const parsedControls = JSON.parse(storedControls) as Record<
+            string,
+            boolean
+          >;
+          setAdControls((current) => ({ ...current, ...parsedControls }));
+        } catch {
+          // Keep the safe default when stored local settings are malformed.
+        }
+      },
+    );
   }, []);
 
   useEffect(() => {
-    void AsyncStorage.setItem('pocketdev-ad-controls', JSON.stringify(adControls));
+    void AsyncStorage.setItem(
+      "pocketdev-ad-controls",
+      JSON.stringify(adControls),
+    );
   }, [adControls]);
 
   const openAuthModal = (reason: string) => {
     setAuthReason(reason);
-    setAuthError('');
+    setAuthError("");
     setAuthModalVisible(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
   };
@@ -587,32 +620,34 @@ export default function HomeScreen() {
   const closeAuthModal = () => {
     Keyboard.dismiss();
     setAuthModalVisible(false);
-    setAuthError('');
+    setAuthError("");
   };
 
   const handleOfflineLogin = () => {
     const email = authEmail.trim();
-    if (!email.includes('@') || !email.includes('.')) {
-      setAuthError('Enter a valid email address.');
+    if (!email.includes("@") || !email.includes(".")) {
+      setAuthError("Enter a valid email address.");
       return;
     }
     if (authPassword.length < 6) {
-      setAuthError('Use a password with at least 6 characters.');
+      setAuthError("Use a password with at least 6 characters.");
       return;
     }
 
     setIsAuthenticated(true);
     setAuthModalVisible(false);
-    setAuthError('');
-    setActionStatus('You are signed in. All professional templates are unlocked.');
+    setAuthError("");
+    setActionStatus(
+      "You are signed in. All professional templates are unlocked.",
+    );
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
   const handleGoogleLogin = () => {
     setIsAuthenticated(true);
     setAuthModalVisible(false);
-    setAuthError('');
-    setActionStatus('Google sign-in completed in offline demo mode.');
+    setAuthError("");
+    setActionStatus("Google sign-in completed in offline demo mode.");
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
@@ -629,32 +664,34 @@ export default function HomeScreen() {
     }
 
     setPrompt(template.prompt);
-    setError('');
+    setError("");
     if (!template.locked || isAuthenticated) {
-      setActionStatus(`${template.title} selected. Tap Generate App to build it.`);
+      setActionStatus(
+        `${template.title} selected. Tap Generate App to build it.`,
+      );
     }
     Haptics.selectionAsync();
   };
 
   const handleDownload = () => {
     if (!isAuthenticated) {
-      openAuthModal('Download generated app');
+      openAuthModal("Download generated app");
       return;
     }
     if (!generatedCode || !generatedFiles.html) {
-      setActionStatus('Generate an app before downloading its files.');
+      setActionStatus("Generate an app before downloading its files.");
       return;
     }
 
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    if (Platform.OS === "web" && typeof window !== "undefined") {
       [
-        ['index.html', generatedFiles.html],
-        ['styles.css', generatedFiles.css],
-        ['script.js', generatedFiles.js],
+        ["index.html", generatedFiles.html],
+        ["styles.css", generatedFiles.css],
+        ["script.js", generatedFiles.js],
       ].forEach(([filename, contents]) => {
-        const blob = new Blob([contents], { type: 'text/plain;charset=utf-8' });
+        const blob = new Blob([contents], { type: "text/plain;charset=utf-8" });
         const url = URL.createObjectURL(blob);
-        const anchor = document.createElement('a');
+        const anchor = document.createElement("a");
         anchor.href = url;
         anchor.download = filename;
         document.body.appendChild(anchor);
@@ -663,39 +700,41 @@ export default function HomeScreen() {
         URL.revokeObjectURL(url);
       });
     } else {
-      const indexFile = new File(Paths.document, 'index.html');
-      const stylesFile = new File(Paths.document, 'styles.css');
-      const scriptFile = new File(Paths.document, 'script.js');
+      const indexFile = new File(Paths.document, "index.html");
+      const stylesFile = new File(Paths.document, "styles.css");
+      const scriptFile = new File(Paths.document, "script.js");
       indexFile.write(generatedFiles.html);
       stylesFile.write(generatedFiles.css);
       scriptFile.write(generatedFiles.js);
-      setActionStatus('Saved index.html, styles.css, and script.js to app storage.');
+      setActionStatus(
+        "Saved index.html, styles.css, and script.js to app storage.",
+      );
       return;
     }
-    setActionStatus('Downloaded index.html, styles.css, and script.js.');
+    setActionStatus("Downloaded index.html, styles.css, and script.js.");
   };
 
   const handleDeploy = () => {
     if (!isAuthenticated) {
-      openAuthModal('Deploy generated app');
+      openAuthModal("Deploy generated app");
       return;
     }
     if (!generatedCode) {
-      setActionStatus('Generate an app before deploying it.');
+      setActionStatus("Generate an app before deploying it.");
       return;
     }
 
     const previewUrl = createStandalonePreviewUrl(generatedCode);
     setLivePreviewUrl(previewUrl);
     setActionStatus(
-      'Standalone live preview created. Copy the link to open the generated app in any browser.',
+      "Standalone live preview created. Copy the link to open the generated app in any browser.",
     );
   };
 
   const openLivePreview = () => {
     if (!livePreviewUrl) return;
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      window.open(livePreviewUrl, '_blank', 'noopener,noreferrer');
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      window.open(livePreviewUrl, "_blank", "noopener,noreferrer");
       return;
     }
     void Linking.openURL(livePreviewUrl);
@@ -703,62 +742,76 @@ export default function HomeScreen() {
 
   const handleTester = () => {
     if (!generatedCode) {
-      setActionStatus('Generate an app before running the AI One-Click Tester.');
+      setActionStatus(
+        "Generate an app before running the AI One-Click Tester.",
+      );
       return;
     }
     setIsLivePreview(true);
     setIsTesterRunning(true);
-    setActionStatus('AI One-Click Tester is running inside the interactive WebView.');
+    setActionStatus(
+      "AI One-Click Tester is running inside the interactive WebView.",
+    );
     setTimeout(() => {
       setIsTesterRunning(false);
-      setActionStatus('AI One-Click Tester completed. Interactive controls are ready.');
+      setActionStatus(
+        "AI One-Click Tester completed. Interactive controls are ready.",
+      );
     }, 1200);
   };
 
   const handleChatSubmit = async () => {
     if (!chatMessage.trim()) {
-      setActionStatus('Describe a change for the AI follow-up box first.');
+      setActionStatus("Describe a change for the AI follow-up box first.");
       return;
     }
-    const updatedPrompt = `${prompt || 'Build a useful local business app'}. Modification: ${chatMessage.trim()}`;
+    const updatedPrompt = `${prompt || "Build a useful local business app"}. Modification: ${chatMessage.trim()}`;
     setIsChatSending(true);
     setPrompt(updatedPrompt.slice(0, 500));
     const updatedHtml = await localGenerateApp(updatedPrompt);
     const updatedFiles = splitGeneratedFiles(updatedHtml);
     setGeneratedFiles(updatedFiles);
     setGeneratedCode(updatedHtml);
-    setChatMessage('');
+    setChatMessage("");
     setIsChatSending(false);
     setIsLivePreview(true);
-    setActionStatus('AI follow-up applied. The live preview has been refreshed.');
+    setActionStatus(
+      "AI follow-up applied. The live preview has been refreshed.",
+    );
   };
 
   const handleBugFix = async () => {
     if (!generatedCode) {
-      setActionStatus('Generate an app before asking the AI Bug Fixer to repair it.');
+      setActionStatus(
+        "Generate an app before asking the AI Bug Fixer to repair it.",
+      );
       return;
     }
     setIsChatSending(true);
-    const repairedHtml = await localGenerateApp(`${prompt} with repaired interactions`);
+    const repairedHtml = await localGenerateApp(
+      `${prompt} with repaired interactions`,
+    );
     const repairedFiles = splitGeneratedFiles(repairedHtml);
     setGeneratedFiles(repairedFiles);
     setGeneratedCode(repairedHtml);
     setIsChatSending(false);
     setIsLivePreview(true);
-    setActionStatus('AI Bug Fixer rebuilt the template interactions and refreshed the preview.');
+    setActionStatus(
+      "AI Bug Fixer rebuilt the template interactions and refreshed the preview.",
+    );
   };
 
   const handleExportGithub = () => {
     if (!isAuthenticated) {
-      openAuthModal('Export project to GitHub');
+      openAuthModal("Export project to GitHub");
       return;
     }
     if (!generatedFiles.html) {
-      setActionStatus('Generate an app before exporting it to GitHub.');
+      setActionStatus("Generate an app before exporting it to GitHub.");
       return;
     }
     setActionStatus(
-      'GitHub-ready export prepared with index.html, styles.css, and script.js. Connect GitHub to publish it.',
+      "GitHub-ready export prepared with index.html, styles.css, and script.js. Connect GitHub to publish it.",
     );
   };
 
@@ -792,8 +845,8 @@ export default function HomeScreen() {
     recognition.continuous = false;
     recognition.interimResults = false;
     recognition.onresult = (event) => {
-      const transcript = event.results[0]?.[0]?.transcript?.trim() ?? '';
-      if (target === 'prompt') {
+      const transcript = event.results[0]?.[0]?.transcript?.trim() ?? "";
+      if (target === "prompt") {
         setPrompt(transcript.slice(0, 500));
       } else {
         setChatMessage(transcript);
@@ -801,7 +854,9 @@ export default function HomeScreen() {
       setActionStatus(`Voice captured in ${voiceLanguage}.`);
     };
     recognition.onerror = () => {
-      setActionStatus('Voice capture could not start. You can type the same request instead.');
+      setActionStatus(
+        "Voice capture could not start. You can type the same request instead.",
+      );
     };
     recognition.onend = () => {
       setIsListening(false);
@@ -816,71 +871,75 @@ export default function HomeScreen() {
   };
 
   const handleVoicePress = () => {
-    handleVoiceCapture('prompt');
-    setError('');
+    handleVoiceCapture("prompt");
+    setError("");
   };
 
   const handleChatVoicePress = () => {
-    handleVoiceCapture('chat');
+    handleVoiceCapture("chat");
   };
 
   const handleScanClone = async () => {
     try {
       const result =
-        Platform.OS === 'web'
+        Platform.OS === "web"
           ? await ImagePicker.launchImageLibraryAsync({
-              mediaTypes: ['images'],
+              mediaTypes: ["images"],
               allowsEditing: true,
               quality: 1,
             })
           : await ImagePicker.launchCameraAsync({
-              mediaTypes: ['images'],
+              mediaTypes: ["images"],
               allowsEditing: true,
               quality: 1,
             });
       if (result.canceled || !result.assets?.[0]?.uri) return;
       const imageUri = result.assets[0].uri;
       setScanImageUri(imageUri);
-      setPrompt('Recreate this scanned screenshot as a responsive, accessible interface');
+      setPrompt(
+        "Recreate this scanned screenshot as a responsive, accessible interface",
+      );
       setActionStatus(
-        'Screenshot captured. The offline clone scaffold is ready for generation.',
+        "Screenshot captured. The offline clone scaffold is ready for generation.",
       );
     } catch {
-      setActionStatus('Camera access was unavailable. Choose a screenshot from your gallery instead.');
+      setActionStatus(
+        "Camera access was unavailable. Choose a screenshot from your gallery instead.",
+      );
     }
   };
 
   const handleAdminTrigger = () => {
-    setAdminPassword('');
-    setAdminError('');
+    setAdminPassword("");
+    setAdminError("");
     setAdminPasswordModalVisible(true);
     Haptics.selectionAsync();
   };
 
   const handleAdminUnlock = () => {
-    if (adminPassword !== 'admin123') {
-      setAdminError('Incorrect admin password.');
+    if (adminPassword !== "admin123") {
+      setAdminError("Incorrect admin password.");
       return;
     }
     setAdminPasswordModalVisible(false);
     setAdminPanelVisible(true);
-    setAdminError('');
-    setAdminPassword('');
+    setAdminError("");
+    setAdminPassword("");
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
   const handleGenerate = async () => {
     Keyboard.dismiss();
     if (!prompt.trim()) {
-      setError('Add a short description to get started.');
+      setError("Add a short description to get started.");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       return;
     }
 
-    setError('');
+    setError("");
     setIsGenerating(true);
-    setGeneratedCode('');
-    setGeneratedFiles({ html: '', css: '', js: '' });
+    setGeneratedCode("");
+    setGeneratedFiles({ html: "", css: "", js: "" });
     setIsLivePreview(false);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
@@ -893,7 +952,7 @@ export default function HomeScreen() {
 
   const handleStarterPress = (starter: string) => {
     setPrompt(starter);
-    setError('');
+    setError("");
     Haptics.selectionAsync();
   };
 
@@ -904,7 +963,7 @@ export default function HomeScreen() {
     >
       <StatusBar style="light" />
       <LinearGradient
-        colors={[colors.background, '#0B1119', colors.background]}
+        colors={[colors.background, "#0B1119", colors.background]}
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
@@ -921,22 +980,29 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-           <Pressable
-             accessibilityLabel="Open admin controls"
-             accessibilityRole="button"
-             onLongPress={handleAdminTrigger}
-             delayLongPress={900}
-             style={({ pressed }) => [styles.brandRow, { opacity: pressed ? 0.72 : 1 }]}
-           >
-            <View style={[styles.brandMark, { backgroundColor: colors.accent }]}>
+          <Pressable
+            accessibilityLabel="Open admin controls"
+            accessibilityRole="button"
+            onLongPress={handleAdminTrigger}
+            delayLongPress={900}
+            style={({ pressed }) => [
+              styles.brandRow,
+              { opacity: pressed ? 0.72 : 1 },
+            ]}
+          >
+            <View
+              style={[styles.brandMark, { backgroundColor: colors.accent }]}
+            >
               <Feather name="code" size={18} color={colors.primary} />
             </View>
             <Text style={[styles.brandName, { color: colors.foreground }]}>
               appforge
             </Text>
-           </Pressable>
+          </Pressable>
           <View style={[styles.betaPill, { borderColor: colors.border }]}>
-            <View style={[styles.liveDot, { backgroundColor: colors.primary }]} />
+            <View
+              style={[styles.liveDot, { backgroundColor: colors.primary }]}
+            />
             <Text style={[styles.betaText, { color: colors.mutedForeground }]}>
               BETA
             </Text>
@@ -948,7 +1014,7 @@ export default function HomeScreen() {
             PROMPT TO PRODUCT
           </Text>
           <Text style={[styles.title, { color: colors.foreground }]}>
-            Turn ideas{'\n'}
+            Turn ideas{"\n"}
             <Text style={{ color: colors.primary }}>into apps.</Text>
           </Text>
           <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
@@ -976,7 +1042,7 @@ export default function HomeScreen() {
               value={prompt}
               onChangeText={(value) => {
                 setPrompt(value);
-                if (error) setError('');
+                if (error) setError("");
               }}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
@@ -988,14 +1054,19 @@ export default function HomeScreen() {
               style={[styles.promptInput, { color: colors.foreground }]}
             />
             <View style={styles.composerFooter}>
-              <Text style={[styles.characterCount, { color: colors.mutedForeground }]}>
+              <Text
+                style={[
+                  styles.characterCount,
+                  { color: colors.mutedForeground },
+                ]}
+              >
                 {prompt.length}/500
               </Text>
               <Pressable
                 testID="voice-button"
                 accessibilityRole="button"
                 accessibilityLabel={
-                  isListening ? 'Stop voice input' : 'Start voice input'
+                  isListening ? "Stop voice input" : "Start voice input"
                 }
                 onPress={handleVoicePress}
                 style={({ pressed }) => [
@@ -1009,7 +1080,7 @@ export default function HomeScreen() {
                 ]}
               >
                 <Feather
-                  name={isListening ? 'square' : 'mic'}
+                  name={isListening ? "square" : "mic"}
                   size={18}
                   color={
                     isListening ? colors.primaryForeground : colors.foreground
@@ -1027,14 +1098,21 @@ export default function HomeScreen() {
               <Text style={[styles.voiceStatusText, { color: colors.primary }]}>
                 Voice input ready
               </Text>
-              <Text style={[styles.voiceHint, { color: colors.mutedForeground }]}>
+              <Text
+                style={[styles.voiceHint, { color: colors.mutedForeground }]}
+              >
                 Tap the mic to stop
               </Text>
             </View>
           ) : null}
 
           <View style={styles.voiceToolsRow}>
-            <Text style={[styles.voiceToolsLabel, { color: colors.mutedForeground }]}>
+            <Text
+              style={[
+                styles.voiceToolsLabel,
+                { color: colors.mutedForeground },
+              ]}
+            >
               VOICE
             </Text>
             <ScrollView
@@ -1050,9 +1128,13 @@ export default function HomeScreen() {
                     styles.voiceLanguageChip,
                     {
                       backgroundColor:
-                        voiceLanguage === language.value ? colors.primary : colors.muted,
+                        voiceLanguage === language.value
+                          ? colors.primary
+                          : colors.muted,
                       borderColor:
-                        voiceLanguage === language.value ? colors.primary : colors.border,
+                        voiceLanguage === language.value
+                          ? colors.primary
+                          : colors.border,
                     },
                   ]}
                 >
@@ -1086,9 +1168,16 @@ export default function HomeScreen() {
             </Pressable>
           </View>
           {scanImageUri ? (
-            <View style={[styles.scanStatus, { backgroundColor: colors.accent }]}>
+            <View
+              style={[styles.scanStatus, { backgroundColor: colors.accent }]}
+            >
               <Feather name="check-circle" size={14} color={colors.primary} />
-              <Text style={[styles.scanStatusText, { color: colors.accentForeground }]}>
+              <Text
+                style={[
+                  styles.scanStatusText,
+                  { color: colors.accentForeground },
+                ]}
+              >
                 Screenshot scanned — clone brief ready
               </Text>
             </View>
@@ -1101,7 +1190,9 @@ export default function HomeScreen() {
           ) : null}
 
           <View style={styles.starterRow}>
-            <Text style={[styles.starterLabel, { color: colors.mutedForeground }]}>
+            <Text
+              style={[styles.starterLabel, { color: colors.mutedForeground }]}
+            >
               TRY
             </Text>
             <ScrollView
@@ -1122,7 +1213,12 @@ export default function HomeScreen() {
                     },
                   ]}
                 >
-                  <Text style={[styles.starterText, { color: colors.secondaryForeground }]}>
+                  <Text
+                    style={[
+                      styles.starterText,
+                      { color: colors.secondaryForeground },
+                    ]}
+                  >
                     {starter}
                   </Text>
                 </Pressable>
@@ -1149,10 +1245,19 @@ export default function HomeScreen() {
             <ActivityIndicator color={colors.primaryForeground} />
           ) : (
             <>
-              <Text style={[styles.generateText, { color: colors.primaryForeground }]}>
+              <Text
+                style={[
+                  styles.generateText,
+                  { color: colors.primaryForeground },
+                ]}
+              >
                 Generate App
               </Text>
-              <Feather name="arrow-up-right" size={20} color={colors.primaryForeground} />
+              <Feather
+                name="arrow-up-right"
+                size={20}
+                color={colors.primaryForeground}
+              />
             </>
           )}
         </Pressable>
@@ -1160,16 +1265,30 @@ export default function HomeScreen() {
         <View style={styles.templatesSection}>
           <View style={styles.templatesHeader}>
             <View>
-              <Text style={[styles.outputEyebrow, { color: colors.mutedForeground }]}>
+              <Text
+                style={[
+                  styles.outputEyebrow,
+                  { color: colors.mutedForeground },
+                ]}
+              >
                 STARTER LIBRARY
               </Text>
-              <Text style={[styles.templatesTitle, { color: colors.foreground }]}>
+              <Text
+                style={[styles.templatesTitle, { color: colors.foreground }]}
+              >
                 Choose a template
               </Text>
             </View>
-            <View style={[styles.templateCount, { backgroundColor: colors.muted }]}>
-              <Text style={[styles.templateCountText, { color: colors.mutedForeground }]}>
-                {isAuthenticated ? '12 unlocked' : '3 free · 9 locked'}
+            <View
+              style={[styles.templateCount, { backgroundColor: colors.muted }]}
+            >
+              <Text
+                style={[
+                  styles.templateCountText,
+                  { color: colors.mutedForeground },
+                ]}
+              >
+                {isAuthenticated ? "12 unlocked" : "3 free · 9 locked"}
               </Text>
             </View>
           </View>
@@ -1182,7 +1301,9 @@ export default function HomeScreen() {
                   testID={`template-${template.id}`}
                   accessibilityRole="button"
                   accessibilityLabel={
-                    isLocked ? `Unlock ${template.title}` : `Use ${template.title}`
+                    isLocked
+                      ? `Unlock ${template.title}`
+                      : `Use ${template.title}`
                   }
                   onPress={() => handleTemplatePress(template)}
                   style={({ pressed }) => [
@@ -1198,27 +1319,46 @@ export default function HomeScreen() {
                     <View
                       style={[
                         styles.templateIcon,
-                        { backgroundColor: isLocked ? colors.muted : colors.accent },
+                        {
+                          backgroundColor: isLocked
+                            ? colors.muted
+                            : colors.accent,
+                        },
                       ]}
                     >
                       <Feather
                         name={template.icon}
                         size={16}
-                        color={isLocked ? colors.mutedForeground : colors.primary}
+                        color={
+                          isLocked ? colors.mutedForeground : colors.primary
+                        }
                       />
                     </View>
                     {isLocked ? (
-                      <Feather name="lock" size={14} color={colors.mutedForeground} />
+                      <Feather
+                        name="lock"
+                        size={14}
+                        color={colors.mutedForeground}
+                      />
                     ) : (
-                      <Text style={[styles.freeLabel, { color: colors.primary }]}>
-                        {template.locked ? 'PRO' : 'FREE'}
+                      <Text
+                        style={[styles.freeLabel, { color: colors.primary }]}
+                      >
+                        {template.locked ? "PRO" : "FREE"}
                       </Text>
                     )}
                   </View>
-                  <Text style={[styles.templateName, { color: colors.foreground }]}>
+                  <Text
+                    style={[styles.templateName, { color: colors.foreground }]}
+                  >
                     {template.title}
                   </Text>
-                  <Text style={[styles.templateDescription, { color: colors.mutedForeground }]}>
+                  <Text
+                    style={[
+                      styles.templateDescription,
+                      { color: colors.mutedForeground },
+                    ]}
+                  >
                     {template.description}
                   </Text>
                 </Pressable>
@@ -1226,9 +1366,16 @@ export default function HomeScreen() {
             })}
           </View>
           {actionStatus ? (
-            <View style={[styles.actionStatus, { backgroundColor: colors.accent }]}>
+            <View
+              style={[styles.actionStatus, { backgroundColor: colors.accent }]}
+            >
               <Feather name="info" size={14} color={colors.primary} />
-              <Text style={[styles.actionStatusText, { color: colors.accentForeground }]}>
+              <Text
+                style={[
+                  styles.actionStatusText,
+                  { color: colors.accentForeground },
+                ]}
+              >
                 {actionStatus}
               </Text>
             </View>
@@ -1237,7 +1384,9 @@ export default function HomeScreen() {
 
         <View style={styles.outputHeader}>
           <View>
-            <Text style={[styles.outputEyebrow, { color: colors.mutedForeground }]}>
+            <Text
+              style={[styles.outputEyebrow, { color: colors.mutedForeground }]}
+            >
               WORKSPACE
             </Text>
             <Text style={[styles.outputTitle, { color: colors.foreground }]}>
@@ -1249,7 +1398,7 @@ export default function HomeScreen() {
               testID="live-preview-toggle"
               accessibilityRole="button"
               accessibilityLabel={
-                isLivePreview ? 'Show generated code' : 'View live app'
+                isLivePreview ? "Show generated code" : "View live app"
               }
               disabled={!generatedCode}
               onPress={() => {
@@ -1268,7 +1417,7 @@ export default function HomeScreen() {
               ]}
             >
               <Feather
-                name={isLivePreview ? 'code' : 'play'}
+                name={isLivePreview ? "code" : "play"}
                 size={13}
                 color={
                   isLivePreview
@@ -1286,17 +1435,24 @@ export default function HomeScreen() {
                   },
                 ]}
               >
-                {isLivePreview ? 'Show code' : 'View live app'}
+                {isLivePreview ? "Show code" : "View live app"}
               </Text>
             </Pressable>
-            <View style={[styles.outputBadge, { backgroundColor: colors.muted }]}>
+            <View
+              style={[styles.outputBadge, { backgroundColor: colors.muted }]}
+            >
               <Feather
-                name={generatedCode ? 'check-circle' : 'code'}
+                name={generatedCode ? "check-circle" : "code"}
                 size={14}
                 color={generatedCode ? colors.primary : colors.mutedForeground}
               />
-              <Text style={[styles.outputBadgeText, { color: colors.mutedForeground }]}>
-                {generatedCode ? 'READY' : 'EMPTY'}
+              <Text
+                style={[
+                  styles.outputBadgeText,
+                  { color: colors.mutedForeground },
+                ]}
+              >
+                {generatedCode ? "READY" : "EMPTY"}
               </Text>
             </View>
           </View>
@@ -1309,7 +1465,12 @@ export default function HomeScreen() {
               <Text style={[styles.testerTitle, { color: colors.foreground }]}>
                 AI One-Click Tester
               </Text>
-              <Text style={[styles.testerDescription, { color: colors.mutedForeground }]}>
+              <Text
+                style={[
+                  styles.testerDescription,
+                  { color: colors.mutedForeground },
+                ]}
+              >
                 Test buttons inside the live simulator
               </Text>
             </View>
@@ -1325,12 +1486,17 @@ export default function HomeScreen() {
             ]}
           >
             <Feather
-              name={isTesterRunning ? 'loader' : 'play'}
+              name={isTesterRunning ? "loader" : "play"}
               size={14}
               color={colors.primaryForeground}
             />
-            <Text style={[styles.testerButtonText, { color: colors.primaryForeground }]}>
-              {isTesterRunning ? 'Testing' : 'Run test'}
+            <Text
+              style={[
+                styles.testerButtonText,
+                { color: colors.primaryForeground },
+              ]}
+            >
+              {isTesterRunning ? "Testing" : "Run test"}
             </Text>
           </Pressable>
         </View>
@@ -1344,20 +1510,20 @@ export default function HomeScreen() {
           {generatedCode ? (
             isLivePreview ? (
               <View style={styles.previewFrame}>
-                {Platform.OS === 'web' ? (
-                  createElement('iframe', {
-                    title: 'Generated live app preview',
+                {Platform.OS === "web" ? (
+                  createElement("iframe", {
+                    title: "Generated live app preview",
                     srcDoc: generatedCode,
-                    sandbox: 'allow-scripts',
+                    sandbox: "allow-scripts",
                     style: {
-                      border: '0',
+                      border: "0",
                       height: 360,
-                      width: '100%',
+                      width: "100%",
                     },
                   })
                 ) : (
                   <WebView
-                    originWhitelist={['*']}
+                    originWhitelist={["*"]}
                     source={{ html: generatedCode }}
                     javaScriptEnabled
                     domStorageEnabled
@@ -1372,20 +1538,29 @@ export default function HomeScreen() {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.codeContent}
               >
-                <Text style={[styles.codeText, { color: colors.secondaryForeground }]}>
+                <Text
+                  style={[
+                    styles.codeText,
+                    { color: colors.secondaryForeground },
+                  ]}
+                >
                   {generatedCode}
                 </Text>
               </ScrollView>
             )
           ) : (
             <View style={styles.emptyOutput}>
-              <View style={[styles.outputIcon, { backgroundColor: colors.accent }]}>
+              <View
+                style={[styles.outputIcon, { backgroundColor: colors.accent }]}
+              >
                 <Feather name="layers" size={20} color={colors.primary} />
               </View>
               <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
                 Your app will appear here
               </Text>
-              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+              <Text
+                style={[styles.emptyText, { color: colors.mutedForeground }]}
+              >
                 Start with a prompt above to generate your first screen.
               </Text>
             </View>
@@ -1395,29 +1570,50 @@ export default function HomeScreen() {
         {generatedCode ? (
           <View style={styles.fileOutputSection}>
             <View style={styles.fileOutputHeader}>
-              <Text style={[styles.fileOutputTitle, { color: colors.foreground }]}>
+              <Text
+                style={[styles.fileOutputTitle, { color: colors.foreground }]}
+              >
                 Multi-file output
               </Text>
-              <Text style={[styles.fileOutputHint, { color: colors.mutedForeground }]}>
+              <Text
+                style={[
+                  styles.fileOutputHint,
+                  { color: colors.mutedForeground },
+                ]}
+              >
                 3 files ready
               </Text>
             </View>
             <View style={styles.fileChipRow}>
               {[
-                ['index.html', generatedFiles.html.length, 'file-text'],
-                ['styles.css', generatedFiles.css.length, 'layers'],
-                ['script.js', generatedFiles.js.length, 'code'],
+                ["index.html", generatedFiles.html.length, "file-text"],
+                ["styles.css", generatedFiles.css.length, "layers"],
+                ["script.js", generatedFiles.js.length, "code"],
               ].map(([name, size, icon]) => (
                 <View
                   key={name}
                   style={[styles.fileChip, { backgroundColor: colors.muted }]}
                 >
-                  <Feather name={icon as keyof typeof Feather.glyphMap} size={14} color={colors.primary} />
+                  <Feather
+                    name={icon as keyof typeof Feather.glyphMap}
+                    size={14}
+                    color={colors.primary}
+                  />
                   <View style={styles.fileChipCopy}>
-                    <Text style={[styles.fileChipName, { color: colors.foreground }]}>
+                    <Text
+                      style={[
+                        styles.fileChipName,
+                        { color: colors.foreground },
+                      ]}
+                    >
                       {name}
                     </Text>
-                    <Text style={[styles.fileChipSize, { color: colors.mutedForeground }]}>
+                    <Text
+                      style={[
+                        styles.fileChipSize,
+                        { color: colors.mutedForeground },
+                      ]}
+                    >
                       {size} chars
                     </Text>
                   </View>
@@ -1442,8 +1638,17 @@ export default function HomeScreen() {
               },
             ]}
           >
-            <Feather name="download" size={16} color={colors.secondaryForeground} />
-            <Text style={[styles.secondaryActionText, { color: colors.secondaryForeground }]}>
+            <Feather
+              name="download"
+              size={16}
+              color={colors.secondaryForeground}
+            />
+            <Text
+              style={[
+                styles.secondaryActionText,
+                { color: colors.secondaryForeground },
+              ]}
+            >
               Download index.html
             </Text>
           </Pressable>
@@ -1460,24 +1665,47 @@ export default function HomeScreen() {
               },
             ]}
           >
-            <Feather name="upload-cloud" size={16} color={colors.primaryForeground} />
-            <Text style={[styles.primaryActionText, { color: colors.primaryForeground }]}>
+            <Feather
+              name="upload-cloud"
+              size={16}
+              color={colors.primaryForeground}
+            />
+            <Text
+              style={[
+                styles.primaryActionText,
+                { color: colors.primaryForeground },
+              ]}
+            >
               Deploy to Internet
             </Text>
           </Pressable>
         </View>
 
         {livePreviewUrl ? (
-          <View style={[styles.liveLinkCard, { backgroundColor: colors.accent }]}>
+          <View
+            style={[styles.liveLinkCard, { backgroundColor: colors.accent }]}
+          >
             <View style={styles.liveLinkHeader}>
               <View style={styles.liveLinkTitleRow}>
                 <Feather name="globe" size={15} color={colors.primary} />
-                <Text style={[styles.liveLinkTitle, { color: colors.foreground }]}>
+                <Text
+                  style={[styles.liveLinkTitle, { color: colors.foreground }]}
+                >
                   Live preview URL
                 </Text>
               </View>
-              <View style={[styles.liveLinkBadge, { backgroundColor: colors.primary }]}>
-                <Text style={[styles.liveLinkBadgeText, { color: colors.primaryForeground }]}>
+              <View
+                style={[
+                  styles.liveLinkBadge,
+                  { backgroundColor: colors.primary },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.liveLinkBadgeText,
+                    { color: colors.primaryForeground },
+                  ]}
+                >
                   READY
                 </Text>
               </View>
@@ -1496,21 +1724,39 @@ export default function HomeScreen() {
               onPress={openLivePreview}
               style={({ pressed }) => [
                 styles.openPreviewButton,
-                { backgroundColor: colors.secondary, opacity: pressed ? 0.72 : 1 },
+                {
+                  backgroundColor: colors.secondary,
+                  opacity: pressed ? 0.72 : 1,
+                },
               ]}
             >
               <Feather name="external-link" size={15} color={colors.primary} />
-              <Text style={[styles.openPreviewText, { color: colors.secondaryForeground }]}>
+              <Text
+                style={[
+                  styles.openPreviewText,
+                  { color: colors.secondaryForeground },
+                ]}
+              >
                 Open standalone preview
               </Text>
             </Pressable>
           </View>
         ) : null}
 
-        <View style={[styles.chatCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.chatCard,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}
+        >
           <View style={styles.chatHeader}>
             <View>
-              <Text style={[styles.outputEyebrow, { color: colors.mutedForeground }]}>
+              <Text
+                style={[
+                  styles.outputEyebrow,
+                  { color: colors.mutedForeground },
+                ]}
+              >
                 FOLLOW-UP WORKSPACE
               </Text>
               <Text style={[styles.chatTitle, { color: colors.foreground }]}>
@@ -1527,7 +1773,14 @@ export default function HomeScreen() {
             placeholder="Ask for a change, such as: make the hero warmer..."
             placeholderTextColor={colors.mutedForeground}
             textAlignVertical="top"
-            style={[styles.chatInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
+            style={[
+              styles.chatInput,
+              {
+                backgroundColor: colors.background,
+                borderColor: colors.border,
+                color: colors.foreground,
+              },
+            ]}
           />
           <View style={styles.chatActions}>
             <Pressable
@@ -1537,11 +1790,16 @@ export default function HomeScreen() {
               onPress={handleChatVoicePress}
               style={({ pressed }) => [
                 styles.chatIconButton,
-                { backgroundColor: colors.secondary, opacity: pressed ? 0.72 : 1 },
+                {
+                  backgroundColor: colors.secondary,
+                  opacity: pressed ? 0.72 : 1,
+                },
               ]}
             >
               <Feather
-                name={isListening && listeningTarget === 'chat' ? 'square' : 'mic'}
+                name={
+                  isListening && listeningTarget === "chat" ? "square" : "mic"
+                }
                 size={16}
                 color={colors.secondaryForeground}
               />
@@ -1557,7 +1815,9 @@ export default function HomeScreen() {
               ]}
             >
               <Feather name="tool" size={15} color={colors.primary} />
-              <Text style={[styles.bugFixText, { color: colors.accentForeground }]}>
+              <Text
+                style={[styles.bugFixText, { color: colors.accentForeground }]}
+              >
                 AI Bug Fixer
               </Text>
             </Pressable>
@@ -1569,13 +1829,23 @@ export default function HomeScreen() {
               onPress={handleChatSubmit}
               style={({ pressed }) => [
                 styles.chatSubmitButton,
-                { backgroundColor: colors.primary, opacity: isChatSending || pressed ? 0.72 : 1 },
+                {
+                  backgroundColor: colors.primary,
+                  opacity: isChatSending || pressed ? 0.72 : 1,
+                },
               ]}
             >
               {isChatSending ? (
-                <ActivityIndicator size="small" color={colors.primaryForeground} />
+                <ActivityIndicator
+                  size="small"
+                  color={colors.primaryForeground}
+                />
               ) : (
-                <Feather name="arrow-up" size={17} color={colors.primaryForeground} />
+                <Feather
+                  name="arrow-up"
+                  size={17}
+                  color={colors.primaryForeground}
+                />
               )}
             </Pressable>
           </View>
@@ -1588,11 +1858,20 @@ export default function HomeScreen() {
           onPress={handleExportGithub}
           style={({ pressed }) => [
             styles.githubButton,
-            { borderColor: colors.border, backgroundColor: colors.secondary, opacity: pressed ? 0.72 : 1 },
+            {
+              borderColor: colors.border,
+              backgroundColor: colors.secondary,
+              opacity: pressed ? 0.72 : 1,
+            },
           ]}
         >
           <Feather name="github" size={17} color={colors.secondaryForeground} />
-          <Text style={[styles.githubButtonText, { color: colors.secondaryForeground }]}>
+          <Text
+            style={[
+              styles.githubButtonText,
+              { color: colors.secondaryForeground },
+            ]}
+          >
             Export to GitHub
           </Text>
         </Pressable>
@@ -1636,7 +1915,12 @@ export default function HomeScreen() {
                 <Feather name="x" size={20} color={colors.mutedForeground} />
               </Pressable>
             </View>
-            <Text style={[styles.modalDescription, { color: colors.mutedForeground }]}>
+            <Text
+              style={[
+                styles.modalDescription,
+                { color: colors.mutedForeground },
+              ]}
+            >
               {authReason}. Sign in for free to unlock all professional tools.
             </Text>
             <TextInput
@@ -1646,13 +1930,17 @@ export default function HomeScreen() {
               keyboardType="email-address"
               onChangeText={(value) => {
                 setAuthEmail(value);
-                if (authError) setAuthError('');
+                if (authError) setAuthError("");
               }}
               placeholder="Email address"
               placeholderTextColor={colors.mutedForeground}
               style={[
                 styles.modalInput,
-                { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground },
+                {
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                  color: colors.foreground,
+                },
               ]}
               value={authEmail}
             />
@@ -1662,14 +1950,18 @@ export default function HomeScreen() {
               autoComplete="password"
               onChangeText={(value) => {
                 setAuthPassword(value);
-                if (authError) setAuthError('');
+                if (authError) setAuthError("");
               }}
               placeholder="Password"
               placeholderTextColor={colors.mutedForeground}
               secureTextEntry
               style={[
                 styles.modalInput,
-                { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground },
+                {
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                  color: colors.foreground,
+                },
               ]}
               value={authPassword}
             />
@@ -1685,19 +1977,42 @@ export default function HomeScreen() {
               onPress={handleOfflineLogin}
               style={({ pressed }) => [
                 styles.modalPrimaryButton,
-                { backgroundColor: colors.primary, opacity: pressed ? 0.72 : 1 },
+                {
+                  backgroundColor: colors.primary,
+                  opacity: pressed ? 0.72 : 1,
+                },
               ]}
             >
-              <Text style={[styles.modalPrimaryText, { color: colors.primaryForeground }]}>
+              <Text
+                style={[
+                  styles.modalPrimaryText,
+                  { color: colors.primaryForeground },
+                ]}
+              >
                 Continue with email
               </Text>
             </Pressable>
             <View style={styles.modalDivider}>
-              <View style={[styles.modalDividerLine, { backgroundColor: colors.border }]} />
-              <Text style={[styles.modalDividerText, { color: colors.mutedForeground }]}>
+              <View
+                style={[
+                  styles.modalDividerLine,
+                  { backgroundColor: colors.border },
+                ]}
+              />
+              <Text
+                style={[
+                  styles.modalDividerText,
+                  { color: colors.mutedForeground },
+                ]}
+              >
                 OR
               </Text>
-              <View style={[styles.modalDividerLine, { backgroundColor: colors.border }]} />
+              <View
+                style={[
+                  styles.modalDividerLine,
+                  { backgroundColor: colors.border },
+                ]}
+              />
             </View>
             <Pressable
               testID="google-login-button"
@@ -1713,12 +2028,21 @@ export default function HomeScreen() {
                 },
               ]}
             >
-              <Text style={[styles.googleMark, { color: colors.primary }]}>G</Text>
-              <Text style={[styles.googleButtonText, { color: colors.secondaryForeground }]}>
+              <Text style={[styles.googleMark, { color: colors.primary }]}>
+                G
+              </Text>
+              <Text
+                style={[
+                  styles.googleButtonText,
+                  { color: colors.secondaryForeground },
+                ]}
+              >
                 Continue with Google
               </Text>
             </Pressable>
-            <Text style={[styles.privacyNote, { color: colors.mutedForeground }]}>
+            <Text
+              style={[styles.privacyNote, { color: colors.mutedForeground }]}
+            >
               Offline demo account. No credentials leave this device.
             </Text>
           </View>
@@ -1756,7 +2080,12 @@ export default function HomeScreen() {
                 <Feather name="x" size={20} color={colors.mutedForeground} />
               </Pressable>
             </View>
-            <Text style={[styles.modalDescription, { color: colors.mutedForeground }]}>
+            <Text
+              style={[
+                styles.modalDescription,
+                { color: colors.mutedForeground },
+              ]}
+            >
               This local panel is hidden behind a password for demo testing.
             </Text>
             <TextInput
@@ -1764,14 +2093,18 @@ export default function HomeScreen() {
               autoCapitalize="none"
               onChangeText={(value) => {
                 setAdminPassword(value);
-                if (adminError) setAdminError('');
+                if (adminError) setAdminError("");
               }}
               placeholder="Admin password"
               placeholderTextColor={colors.mutedForeground}
               secureTextEntry
               style={[
                 styles.modalInput,
-                { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground },
+                {
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                  color: colors.foreground,
+                },
               ]}
               value={adminPassword}
             />
@@ -1787,14 +2120,24 @@ export default function HomeScreen() {
               onPress={handleAdminUnlock}
               style={({ pressed }) => [
                 styles.modalPrimaryButton,
-                { backgroundColor: colors.primary, opacity: pressed ? 0.72 : 1 },
+                {
+                  backgroundColor: colors.primary,
+                  opacity: pressed ? 0.72 : 1,
+                },
               ]}
             >
-              <Text style={[styles.modalPrimaryText, { color: colors.primaryForeground }]}>
+              <Text
+                style={[
+                  styles.modalPrimaryText,
+                  { color: colors.primaryForeground },
+                ]}
+              >
                 Open admin panel
               </Text>
             </Pressable>
-            <Text style={[styles.privacyNote, { color: colors.mutedForeground }]}>
+            <Text
+              style={[styles.privacyNote, { color: colors.mutedForeground }]}
+            >
               Local-only demo gate. Use a server-side secret before production.
             </Text>
           </View>
@@ -1836,41 +2179,117 @@ export default function HomeScreen() {
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.adminPanelContent}
             >
-              <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
+              <Text
+                style={[styles.sectionLabel, { color: colors.mutedForeground }]}
+              >
                 MOCK TRAFFIC ANALYTICS
               </Text>
               <View style={styles.analyticsGrid}>
-                <View style={[styles.analyticsCard, { backgroundColor: colors.background }]}>
-                  <Text style={[styles.analyticsValue, { color: colors.foreground }]}>12.8k</Text>
-                  <Text style={[styles.analyticsLabel, { color: colors.mutedForeground }]}>
+                <View
+                  style={[
+                    styles.analyticsCard,
+                    { backgroundColor: colors.background },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.analyticsValue,
+                      { color: colors.foreground },
+                    ]}
+                  >
+                    12.8k
+                  </Text>
+                  <Text
+                    style={[
+                      styles.analyticsLabel,
+                      { color: colors.mutedForeground },
+                    ]}
+                  >
                     Visitors
                   </Text>
                 </View>
-                <View style={[styles.analyticsCard, { backgroundColor: colors.background }]}>
-                  <Text style={[styles.analyticsValue, { color: colors.foreground }]}>4.2k</Text>
-                  <Text style={[styles.analyticsLabel, { color: colors.mutedForeground }]}>
+                <View
+                  style={[
+                    styles.analyticsCard,
+                    { backgroundColor: colors.background },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.analyticsValue,
+                      { color: colors.foreground },
+                    ]}
+                  >
+                    4.2k
+                  </Text>
+                  <Text
+                    style={[
+                      styles.analyticsLabel,
+                      { color: colors.mutedForeground },
+                    ]}
+                  >
                     Apps generated
                   </Text>
                 </View>
-                <View style={[styles.analyticsCard, { backgroundColor: colors.background }]}>
-                  <Text style={[styles.analyticsValue, { color: colors.foreground }]}>68%</Text>
-                  <Text style={[styles.analyticsLabel, { color: colors.mutedForeground }]}>
+                <View
+                  style={[
+                    styles.analyticsCard,
+                    { backgroundColor: colors.background },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.analyticsValue,
+                      { color: colors.foreground },
+                    ]}
+                  >
+                    68%
+                  </Text>
+                  <Text
+                    style={[
+                      styles.analyticsLabel,
+                      { color: colors.mutedForeground },
+                    ]}
+                  >
                     Return rate
                   </Text>
                 </View>
-                <View style={[styles.analyticsCard, { backgroundColor: colors.background }]}>
-                  <Text style={[styles.analyticsValue, { color: colors.primary }]}>+24%</Text>
-                  <Text style={[styles.analyticsLabel, { color: colors.mutedForeground }]}>
+                <View
+                  style={[
+                    styles.analyticsCard,
+                    { backgroundColor: colors.background },
+                  ]}
+                >
+                  <Text
+                    style={[styles.analyticsValue, { color: colors.primary }]}
+                  >
+                    +24%
+                  </Text>
+                  <Text
+                    style={[
+                      styles.analyticsLabel,
+                      { color: colors.mutedForeground },
+                    ]}
+                  >
                     Weekly growth
                   </Text>
                 </View>
               </View>
-              <View style={[styles.chartCard, { backgroundColor: colors.background }]}>
+              <View
+                style={[
+                  styles.chartCard,
+                  { backgroundColor: colors.background },
+                ]}
+              >
                 <View style={styles.chartHeader}>
-                  <Text style={[styles.chartTitle, { color: colors.foreground }]}>
+                  <Text
+                    style={[styles.chartTitle, { color: colors.foreground }]}
+                  >
                     Weekly traffic
                   </Text>
-                  <Text style={[styles.chartPeriod, { color: colors.primary }]}>7 days</Text>
+                  <Text style={[styles.chartPeriod, { color: colors.primary }]}>
+                    7 days
+                  </Text>
                 </View>
                 <View style={styles.chartBars}>
                   {[42, 58, 46, 74, 62, 88, 96].map((height, index) => (
@@ -1878,53 +2297,105 @@ export default function HomeScreen() {
                       <View
                         style={[
                           styles.chartBar,
-                          { backgroundColor: colors.primary, height: height * 1.25 },
+                          {
+                            backgroundColor: colors.primary,
+                            height: height * 1.25,
+                          },
                         ]}
                       />
-                      <Text style={[styles.chartDay, { color: colors.mutedForeground }]}>
-                        {['M', 'T', 'W', 'T', 'F', 'S', 'S'][index]}
+                      <Text
+                        style={[
+                          styles.chartDay,
+                          { color: colors.mutedForeground },
+                        ]}
+                      >
+                        {["M", "T", "W", "T", "F", "S", "S"][index]}
                       </Text>
                     </View>
                   ))}
                 </View>
               </View>
-              <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
+              <Text
+                style={[styles.sectionLabel, { color: colors.mutedForeground }]}
+              >
                 SHARIAH AD-MOB CONTROLS
               </Text>
-              <View style={[styles.controlsCard, { backgroundColor: colors.background }]}>
-                <Text style={[styles.controlsDescription, { color: colors.mutedForeground }]}>
-                  Block sensitive ad categories completely offline before an ad slot is shown.
+              <View
+                style={[
+                  styles.controlsCard,
+                  { backgroundColor: colors.background },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.controlsDescription,
+                    { color: colors.mutedForeground },
+                  ]}
+                >
+                  Block sensitive ad categories completely offline before an ad
+                  slot is shown.
                 </Text>
                 {[
-                  ['interest', 'Interest', 'Block interest-based promotions'],
-                  ['gambling', 'Gambling', 'Block betting and casino ads'],
-                  ['adult', 'Adult Content', 'Block explicit or mature ads'],
+                  ["interest", "Interest", "Block interest-based promotions"],
+                  ["gambling", "Gambling", "Block betting and casino ads"],
+                  ["adult", "Adult Content", "Block explicit or mature ads"],
                 ].map(([key, title, description]) => (
                   <View key={key} style={styles.controlRow}>
                     <View style={styles.controlCopy}>
-                      <Text style={[styles.controlTitle, { color: colors.foreground }]}>
+                      <Text
+                        style={[
+                          styles.controlTitle,
+                          { color: colors.foreground },
+                        ]}
+                      >
                         {title}
                       </Text>
-                      <Text style={[styles.controlDescription, { color: colors.mutedForeground }]}>
+                      <Text
+                        style={[
+                          styles.controlDescription,
+                          { color: colors.mutedForeground },
+                        ]}
+                      >
                         {description}
                       </Text>
                     </View>
                     <Switch
                       accessibilityLabel={`Block ${title}`}
                       onValueChange={(value) =>
-                        setAdControls((current) => ({ ...current, [key]: value }))
+                        setAdControls((current) => ({
+                          ...current,
+                          [key]: value,
+                        }))
                       }
-                      thumbColor={adControls[key] ? colors.primaryForeground : colors.mutedForeground}
-                      trackColor={{ false: colors.secondary, true: colors.primary }}
+                      thumbColor={
+                        adControls[key]
+                          ? colors.primaryForeground
+                          : colors.mutedForeground
+                      }
+                      trackColor={{
+                        false: colors.secondary,
+                        true: colors.primary,
+                      }}
                       value={adControls[key]}
                     />
                   </View>
                 ))}
               </View>
-              <View style={[styles.protectionStatus, { backgroundColor: colors.accent }]}>
+              <View
+                style={[
+                  styles.protectionStatus,
+                  { backgroundColor: colors.accent },
+                ]}
+              >
                 <Feather name="shield" size={15} color={colors.primary} />
-                <Text style={[styles.protectionStatusText, { color: colors.accentForeground }]}>
-                  {Object.values(adControls).filter(Boolean).length}/3 categories blocked
+                <Text
+                  style={[
+                    styles.protectionStatusText,
+                    { color: colors.accentForeground },
+                  ]}
+                >
+                  {Object.values(adControls).filter(Boolean).length}/3
+                  categories blocked
                 </Text>
               </View>
             </ScrollView>
@@ -1943,32 +2414,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   header: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   brandRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
     gap: 10,
   },
   brandMark: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 10,
     height: 34,
-    justifyContent: 'center',
+    justifyContent: "center",
     width: 34,
   },
   brandName: {
-    fontFamily: 'Inter_700Bold',
+    fontFamily: "Inter_700Bold",
     fontSize: 17,
     letterSpacing: -0.4,
   },
   betaPill: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 99,
     borderWidth: 1,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 6,
     paddingHorizontal: 9,
     paddingVertical: 5,
@@ -1979,7 +2450,7 @@ const styles = StyleSheet.create({
     width: 5,
   },
   betaText: {
-    fontFamily: 'Inter_700Bold',
+    fontFamily: "Inter_700Bold",
     fontSize: 10,
     letterSpacing: 1,
   },
@@ -1987,19 +2458,19 @@ const styles = StyleSheet.create({
     marginTop: 66,
   },
   eyebrow: {
-    fontFamily: 'Inter_700Bold',
+    fontFamily: "Inter_700Bold",
     fontSize: 11,
     letterSpacing: 1.8,
   },
   title: {
-    fontFamily: 'Inter_700Bold',
+    fontFamily: "Inter_700Bold",
     fontSize: 42,
     letterSpacing: -2,
     lineHeight: 46,
     marginTop: 12,
   },
   subtitle: {
-    fontFamily: 'Inter_400Regular',
+    fontFamily: "Inter_400Regular",
     fontSize: 15,
     lineHeight: 23,
     marginTop: 16,
@@ -2016,31 +2487,31 @@ const styles = StyleSheet.create({
   },
   promptInput: {
     flex: 1,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: "Inter_400Regular",
     fontSize: 17,
     lineHeight: 25,
     minHeight: 100,
   },
   composerFooter: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginTop: 8,
   },
   characterCount: {
-    fontFamily: 'Inter_400Regular',
+    fontFamily: "Inter_400Regular",
     fontSize: 11,
   },
   micButton: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 12,
     height: 38,
-    justifyContent: 'center',
+    justifyContent: "center",
     width: 38,
   },
   voiceStatus: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
     gap: 7,
     marginTop: 11,
   },
@@ -2050,21 +2521,21 @@ const styles = StyleSheet.create({
     width: 6,
   },
   voiceStatusText: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 12,
   },
   voiceHint: {
-    fontFamily: 'Inter_400Regular',
+    fontFamily: "Inter_400Regular",
     fontSize: 12,
   },
   voiceToolsRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
     gap: 7,
     marginTop: 14,
   },
   voiceToolsLabel: {
-    fontFamily: 'Inter_700Bold',
+    fontFamily: "Inter_700Bold",
     fontSize: 10,
     letterSpacing: 1.1,
   },
@@ -2079,41 +2550,41 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   voiceLanguageText: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 10,
   },
   scanButton: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 10,
     height: 32,
-    justifyContent: 'center',
+    justifyContent: "center",
     width: 34,
   },
   scanStatus: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 10,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 7,
     marginTop: 9,
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
   scanStatusText: {
-    fontFamily: 'Inter_500Medium',
+    fontFamily: "Inter_500Medium",
     fontSize: 11,
   },
   errorText: {
-    fontFamily: 'Inter_500Medium',
+    fontFamily: "Inter_500Medium",
     fontSize: 12,
     marginTop: 10,
   },
   starterRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
     marginTop: 16,
   },
   starterLabel: {
-    fontFamily: 'Inter_700Bold',
+    fontFamily: "Inter_700Bold",
     fontSize: 10,
     letterSpacing: 1.2,
     marginRight: 10,
@@ -2128,32 +2599,32 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   starterText: {
-    fontFamily: 'Inter_500Medium',
+    fontFamily: "Inter_500Medium",
     fontSize: 11,
   },
   generateButton: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 15,
-    flexDirection: 'row',
+    flexDirection: "row",
     height: 58,
-    justifyContent: 'center',
+    justifyContent: "center",
     marginTop: 27,
     gap: 9,
   },
   generateText: {
-    fontFamily: 'Inter_700Bold',
+    fontFamily: "Inter_700Bold",
     fontSize: 16,
   },
   templatesSection: {
     marginTop: 36,
   },
   templatesHeader: {
-    alignItems: 'flex-end',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: "flex-end",
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   templatesTitle: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 20,
     letterSpacing: -0.5,
     marginTop: 5,
@@ -2164,12 +2635,12 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   templateCountText: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 10,
   },
   templateGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
     marginTop: 14,
   },
@@ -2178,40 +2649,40 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     minHeight: 142,
     padding: 13,
-    width: '48%',
+    width: "48%",
   },
   templateCardTop: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   templateIcon: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 10,
     height: 34,
-    justifyContent: 'center',
+    justifyContent: "center",
     width: 34,
   },
   freeLabel: {
-    fontFamily: 'Inter_700Bold',
+    fontFamily: "Inter_700Bold",
     fontSize: 9,
     letterSpacing: 0.7,
   },
   templateName: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 13,
     marginTop: 15,
   },
   templateDescription: {
-    fontFamily: 'Inter_400Regular',
+    fontFamily: "Inter_400Regular",
     fontSize: 11,
     lineHeight: 16,
     marginTop: 5,
   },
   actionStatus: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 12,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
     marginTop: 12,
     paddingHorizontal: 12,
@@ -2219,56 +2690,56 @@ const styles = StyleSheet.create({
   },
   actionStatusText: {
     flex: 1,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: "Inter_500Medium",
     fontSize: 11,
     lineHeight: 16,
   },
   outputHeader: {
-    alignItems: 'flex-end',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: "flex-end",
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginTop: 42,
   },
   outputActions: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
     gap: 7,
   },
   outputEyebrow: {
-    fontFamily: 'Inter_700Bold',
+    fontFamily: "Inter_700Bold",
     fontSize: 10,
     letterSpacing: 1.6,
   },
   outputTitle: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 20,
     letterSpacing: -0.5,
     marginTop: 5,
   },
   outputBadge: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 99,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 5,
     paddingHorizontal: 9,
     paddingVertical: 6,
   },
   outputBadgeText: {
-    fontFamily: 'Inter_700Bold',
+    fontFamily: "Inter_700Bold",
     fontSize: 10,
     letterSpacing: 0.8,
   },
   previewToggle: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 99,
     borderWidth: 1,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 5,
     paddingHorizontal: 10,
     paddingVertical: 7,
   },
   previewToggleText: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 10,
   },
   outputCard: {
@@ -2276,86 +2747,86 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginTop: 14,
     minHeight: 190,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   previewFrame: {
     minHeight: 340,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   testerBar: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 14,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginTop: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   testerCopy: {
-    alignItems: 'center',
+    alignItems: "center",
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 9,
   },
   testerTitle: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 12,
   },
   testerDescription: {
-    fontFamily: 'Inter_400Regular',
+    fontFamily: "Inter_400Regular",
     fontSize: 10,
     marginTop: 2,
   },
   testerButton: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 10,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 6,
     minHeight: 34,
     paddingHorizontal: 10,
   },
   testerButtonText: {
-    fontFamily: 'Inter_700Bold',
+    fontFamily: "Inter_700Bold",
     fontSize: 10,
   },
   webView: {
-    backgroundColor: '#0B1119',
+    backgroundColor: "#0B1119",
     height: 360,
-    width: '100%',
+    width: "100%",
   },
   emptyOutput: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     minHeight: 190,
     paddingHorizontal: 30,
   },
   outputIcon: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 13,
     height: 44,
-    justifyContent: 'center',
+    justifyContent: "center",
     width: 44,
   },
   emptyTitle: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 15,
     marginTop: 13,
   },
   emptyText: {
-    fontFamily: 'Inter_400Regular',
+    fontFamily: "Inter_400Regular",
     fontSize: 13,
     lineHeight: 20,
     marginTop: 6,
-    textAlign: 'center',
+    textAlign: "center",
   },
   codeContent: {
     padding: 18,
   },
   codeText: {
     fontFamily: Platform.select({
-      ios: 'Menlo',
-      android: 'monospace',
-      default: 'monospace',
+      ios: "Menlo",
+      android: "monospace",
+      default: "monospace",
     }),
     fontSize: 13,
     lineHeight: 21,
@@ -2364,28 +2835,28 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   fileOutputHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 8,
   },
   fileOutputTitle: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 14,
   },
   fileOutputHint: {
-    fontFamily: 'Inter_500Medium',
+    fontFamily: "Inter_500Medium",
     fontSize: 10,
   },
   fileChipRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 7,
   },
   fileChip: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 11,
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 7,
     minHeight: 48,
     paddingHorizontal: 8,
@@ -2394,46 +2865,46 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   fileChipName: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 10,
   },
   fileChipSize: {
-    fontFamily: 'Inter_400Regular',
+    fontFamily: "Inter_400Regular",
     fontSize: 9,
     marginTop: 3,
   },
   businessActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
     marginTop: 12,
   },
   secondaryAction: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 13,
     borderWidth: 1,
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 7,
-    justifyContent: 'center',
+    justifyContent: "center",
     minHeight: 48,
     paddingHorizontal: 10,
   },
   secondaryActionText: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 11,
   },
   primaryAction: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 13,
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 7,
-    justifyContent: 'center',
+    justifyContent: "center",
     minHeight: 48,
     paddingHorizontal: 10,
   },
   primaryActionText: {
-    fontFamily: 'Inter_700Bold',
+    fontFamily: "Inter_700Bold",
     fontSize: 11,
   },
   liveLinkCard: {
@@ -2442,17 +2913,17 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   liveLinkHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   liveLinkTitleRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
     gap: 8,
   },
   liveLinkTitle: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 13,
   },
   liveLinkBadge: {
@@ -2461,31 +2932,31 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   liveLinkBadgeText: {
-    fontFamily: 'Inter_700Bold',
+    fontFamily: "Inter_700Bold",
     fontSize: 9,
     letterSpacing: 0.7,
   },
   liveLinkUrl: {
     fontFamily: Platform.select({
-      ios: 'Menlo',
-      android: 'monospace',
-      default: 'monospace',
+      ios: "Menlo",
+      android: "monospace",
+      default: "monospace",
     }),
     fontSize: 10,
     lineHeight: 15,
     marginTop: 11,
   },
   openPreviewButton: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 10,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 7,
-    justifyContent: 'center',
+    justifyContent: "center",
     marginTop: 12,
     minHeight: 40,
   },
   openPreviewText: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 12,
   },
   chatCard: {
@@ -2495,12 +2966,12 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   chatHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   chatTitle: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 18,
     letterSpacing: -0.4,
     marginTop: 5,
@@ -2508,7 +2979,7 @@ const styles = StyleSheet.create({
   chatInput: {
     borderRadius: 12,
     borderWidth: 1,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: "Inter_400Regular",
     fontSize: 13,
     lineHeight: 19,
     marginTop: 14,
@@ -2517,57 +2988,57 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   chatActions: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
     gap: 8,
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
     marginTop: 10,
   },
   chatIconButton: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 10,
     height: 38,
-    justifyContent: 'center',
+    justifyContent: "center",
     width: 38,
   },
   bugFixButton: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 10,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 6,
     height: 38,
     paddingHorizontal: 10,
   },
   bugFixText: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 11,
   },
   chatSubmitButton: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 10,
     height: 38,
-    justifyContent: 'center',
+    justifyContent: "center",
     width: 42,
   },
   githubButton: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 13,
     borderWidth: 1,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
-    justifyContent: 'center',
+    justifyContent: "center",
     marginTop: 10,
     minHeight: 48,
   },
   githubButtonText: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 13,
   },
   modalOverlay: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.72)',
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.72)",
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     padding: 20,
   },
   modalCard: {
@@ -2575,32 +3046,32 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     maxWidth: 440,
     padding: 22,
-    width: '100%',
+    width: "100%",
   },
   modalHeader: {
-    alignItems: 'flex-start',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: "flex-start",
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   modalEyebrow: {
-    fontFamily: 'Inter_700Bold',
+    fontFamily: "Inter_700Bold",
     fontSize: 10,
     letterSpacing: 1.5,
   },
   modalTitle: {
-    fontFamily: 'Inter_700Bold',
+    fontFamily: "Inter_700Bold",
     fontSize: 24,
     letterSpacing: -0.8,
     marginTop: 6,
   },
   iconButton: {
-    alignItems: 'center',
+    alignItems: "center",
     height: 34,
-    justifyContent: 'center',
+    justifyContent: "center",
     width: 34,
   },
   modalDescription: {
-    fontFamily: 'Inter_400Regular',
+    fontFamily: "Inter_400Regular",
     fontSize: 13,
     lineHeight: 20,
     marginBottom: 18,
@@ -2609,31 +3080,31 @@ const styles = StyleSheet.create({
   modalInput: {
     borderRadius: 12,
     borderWidth: 1,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: "Inter_400Regular",
     fontSize: 15,
     height: 50,
     marginTop: 10,
     paddingHorizontal: 14,
   },
   modalError: {
-    fontFamily: 'Inter_500Medium',
+    fontFamily: "Inter_500Medium",
     fontSize: 12,
     marginTop: 8,
   },
   modalPrimaryButton: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 12,
     height: 50,
-    justifyContent: 'center',
+    justifyContent: "center",
     marginTop: 16,
   },
   modalPrimaryText: {
-    fontFamily: 'Inter_700Bold',
+    fontFamily: "Inter_700Bold",
     fontSize: 14,
   },
   modalDivider: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
     gap: 10,
     marginVertical: 17,
   },
@@ -2642,33 +3113,33 @@ const styles = StyleSheet.create({
     height: 1,
   },
   modalDividerText: {
-    fontFamily: 'Inter_700Bold',
+    fontFamily: "Inter_700Bold",
     fontSize: 10,
     letterSpacing: 1,
   },
   googleButton: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 12,
     borderWidth: 1,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
     height: 50,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   googleMark: {
-    fontFamily: 'Inter_700Bold',
+    fontFamily: "Inter_700Bold",
     fontSize: 17,
   },
   googleButtonText: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 14,
   },
   privacyNote: {
-    fontFamily: 'Inter_400Regular',
+    fontFamily: "Inter_400Regular",
     fontSize: 10,
     lineHeight: 15,
     marginTop: 16,
-    textAlign: 'center',
+    textAlign: "center",
   },
   adminPanelCard: {
     borderRadius: 24,
@@ -2676,38 +3147,38 @@ const styles = StyleSheet.create({
     flex: 1,
     marginTop: 54,
     maxWidth: 520,
-    overflow: 'hidden',
-    width: '100%',
+    overflow: "hidden",
+    width: "100%",
   },
   adminPanelContent: {
     padding: 20,
     paddingBottom: 34,
   },
   sectionLabel: {
-    fontFamily: 'Inter_700Bold',
+    fontFamily: "Inter_700Bold",
     fontSize: 10,
     letterSpacing: 1.5,
     marginBottom: 10,
     marginTop: 22,
   },
   analyticsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
   },
   analyticsCard: {
     borderRadius: 14,
     minHeight: 86,
     padding: 14,
-    width: '48%',
+    width: "48%",
   },
   analyticsValue: {
-    fontFamily: 'Inter_700Bold',
+    fontFamily: "Inter_700Bold",
     fontSize: 22,
     letterSpacing: -0.6,
   },
   analyticsLabel: {
-    fontFamily: 'Inter_400Regular',
+    fontFamily: "Inter_400Regular",
     fontSize: 11,
     marginTop: 7,
   },
@@ -2717,28 +3188,28 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   chartHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   chartTitle: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 14,
   },
   chartPeriod: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 11,
   },
   chartBars: {
-    alignItems: 'flex-end',
-    flexDirection: 'row',
+    alignItems: "flex-end",
+    flexDirection: "row",
     height: 150,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
     marginTop: 18,
   },
   chartBarColumn: {
-    alignItems: 'center',
-    justifyContent: 'flex-end',
+    alignItems: "center",
+    justifyContent: "flex-end",
   },
   chartBar: {
     borderRadius: 5,
@@ -2746,7 +3217,7 @@ const styles = StyleSheet.create({
     width: 18,
   },
   chartDay: {
-    fontFamily: 'Inter_500Medium',
+    fontFamily: "Inter_500Medium",
     fontSize: 10,
     marginTop: 8,
   },
@@ -2755,55 +3226,55 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   controlsDescription: {
-    fontFamily: 'Inter_400Regular',
+    fontFamily: "Inter_400Regular",
     fontSize: 12,
     lineHeight: 18,
     marginBottom: 8,
   },
   controlRow: {
-    alignItems: 'center',
-    borderTopColor: '#26313F',
+    alignItems: "center",
+    borderTopColor: "#26313F",
     borderTopWidth: 1,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
     paddingVertical: 14,
   },
   controlCopy: {
     flex: 1,
   },
   controlTitle: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 14,
   },
   controlDescription: {
-    fontFamily: 'Inter_400Regular',
+    fontFamily: "Inter_400Regular",
     fontSize: 11,
     lineHeight: 16,
     marginTop: 4,
   },
   protectionStatus: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 12,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
     marginTop: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   protectionStatusText: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 11,
   },
   footer: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
     gap: 7,
-    justifyContent: 'center',
+    justifyContent: "center",
     marginTop: 23,
   },
   footerText: {
-    fontFamily: 'Inter_400Regular',
+    fontFamily: "Inter_400Regular",
     fontSize: 11,
   },
 });
