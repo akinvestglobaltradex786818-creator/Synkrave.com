@@ -4,6 +4,7 @@ import { File, Paths } from "expo-file-system";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import * as Linking from "expo-linking";
+import * as Location from "expo-location";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
 import { createElement, useEffect, useMemo, useRef, useState } from "react";
@@ -30,70 +31,46 @@ import { useColors } from "@/hooks/useColors";
  * ---------------------------------------------------------------------------
  * BRAND / CONTACT CONFIG
  * ---------------------------------------------------------------------------
- * These are UI-level placeholders only. Nothing here talks to a real mail
- * server, DNS record, or certificate authority. `openSupportEmail` opens the
- * device's own mail app via a mailto: link — it does not "route" anything on
- * a server. If the primary mail intent can't be opened, it falls back to the
- * secondary inbox by opening a second mailto: link. That is the full extent
- * of what a client-only app can honestly do for "failover" email.
+ * Only one address lives in the app. Where that mail actually ends up
+ * (forwarding, routing, inbox rules) is handled entirely outside this code —
+ * on the domain's DNS / email-routing provider (e.g. Cloudflare Email
+ * Routing). The app has no way to know about or control that, and doesn't
+ * need to: it just opens the device's mail app addressed to this one inbox.
  * ---------------------------------------------------------------------------
  */
 const BRAND_DOMAIN = "https://synkrave.com";
 const SUPPORT_EMAIL_PRIMARY = "support@synkrave.com";
-const SUPPORT_EMAIL_FALLBACK = "akramaliaa1638507@gmail.com";
 
 const openSupportEmail = async (subject: string) => {
-  const primaryUrl = `mailto:${SUPPORT_EMAIL_PRIMARY}?subject=${encodeURIComponent(subject)}`;
+  const mailUrl = `mailto:${SUPPORT_EMAIL_PRIMARY}?subject=${encodeURIComponent(subject)}`;
   try {
-    const canOpen = await Linking.canOpenURL(primaryUrl);
-    if (!canOpen) throw new Error("No mail client for primary address");
-    await Linking.openURL(primaryUrl);
-    return "primary";
-  } catch (primaryError) {
-    console.warn(
-      "[Synkrave] Primary support channel unreachable, falling back:",
-      primaryError,
-    );
-    try {
-      const fallbackUrl = `mailto:${SUPPORT_EMAIL_FALLBACK}?subject=${encodeURIComponent(subject)}`;
-      await Linking.openURL(fallbackUrl);
-      return "fallback";
-    } catch (fallbackError) {
-      console.error(
-        "[Synkrave] Fallback support channel also unreachable:",
-        fallbackError,
-      );
-      return "failed";
-    }
+    const canOpen = await Linking.canOpenURL(mailUrl);
+    if (!canOpen) throw new Error("No mail client available on this device");
+    await Linking.openURL(mailUrl);
+    return "opened";
+  } catch (error) {
+    console.warn("[Synkrave] Could not open mail client:", error);
+    return "failed";
   }
 };
 
 /**
  * ---------------------------------------------------------------------------
- * BACKEND CONFIG (placeholders — not wired to real services)
+ * BACKEND / HOSTING CONFIG
  * ---------------------------------------------------------------------------
- * Real deployment to Vercel/Netlify and a real Supabase/Firebase connection
- * both require server-side secrets (API tokens, service account keys). A
- * mobile client cannot and should not hold those directly. These constants
- * exist so a real backend can be dropped in later without restructuring the
- * UI. Until then, the app honestly reports itself as "not connected."
+ * This build targets Vercel only, for both the generated front-end preview
+ * and the app's own hosting. There is no Netlify, Supabase, or Firebase
+ * wiring in this file. A real production backend on Vercel (e.g. a Postgres
+ * database via Vercel's own integrations, or a separate API) still needs to
+ * be connected with real environment variables — this constant just reports
+ * whether that has been done, it does not create the connection itself.
  * ---------------------------------------------------------------------------
  */
+const HOSTING_PROVIDER = "Vercel";
 const BACKEND_CONFIG = {
-  supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ?? "",
-  supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "",
-  firebaseProjectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID ?? "",
+  databaseUrl: process.env.EXPO_PUBLIC_DATABASE_URL ?? "",
 };
-const isBackendConnected = Boolean(
-  BACKEND_CONFIG.supabaseUrl && BACKEND_CONFIG.supabaseAnonKey,
-);
-
-const DEPLOY_TARGETS = ["Vercel", "Netlify"] as const;
-type DeployTarget = (typeof DEPLOY_TARGETS)[number];
-// Naive client-side alternation. Real load balancing / failover between
-// hosting providers has to happen server-side against real deploy APIs.
-const pickDeployTarget = (previous: DeployTarget | null): DeployTarget =>
-  previous === "Vercel" ? "Netlify" : "Vercel";
+const isBackendConnected = Boolean(BACKEND_CONFIG.databaseUrl);
 
 /**
  * ---------------------------------------------------------------------------
@@ -266,6 +243,28 @@ const worldLanguages: { label: string; value: string }[] = [
   { label: "Македонски (Macedonian)", value: "mk-MK" },
   { label: "Беларуская (Belarusian)", value: "be-BY" },
 ];
+
+// Maps an ISO country code (from reverse-geocoding the device's GPS
+// position) to the closest matching entry in worldLanguages. This is a
+// reasonable default for a country, not a certainty about the person's
+// preferred language — they can always change it from the picker.
+const countryToLanguage: Record<string, string> = {
+  US: "en-US", GB: "en-GB", CA: "en-US", AU: "en-GB", IE: "ga-IE", NZ: "mi-NZ",
+  PK: "ur-PK", IN: "hi-IN", BD: "bn-BD", NP: "ne-NP", LK: "si-LK", AF: "ps-AF",
+  IR: "fa-IR", SA: "ar-SA", AE: "ar-SA", EG: "ar-SA", IQ: "ar-SA", JO: "ar-SA",
+  CN: "zh-CN", TW: "zh-TW", HK: "zh-TW", JP: "ja-JP", KR: "ko-KR",
+  FR: "fr-FR", DE: "de-DE", ES: "es-ES", MX: "es-MX", PT: "pt-PT", BR: "pt-BR",
+  IT: "it-IT", RU: "ru-RU", TR: "tr-TR", NL: "nl-NL", PL: "pl-PL",
+  SE: "sv-SE", NO: "no-NO", DK: "da-DK", FI: "fi-FI", GR: "el-GR", IL: "he-IL",
+  ID: "id-ID", MY: "ms-MY", TH: "th-TH", VN: "vi-VN", PH: "fil-PH",
+  KE: "sw-KE", ET: "am-ET", NG: "ha-NG", ZA: "zu-ZA", GH: "ak-GH", ZW: "sn-ZW",
+  UA: "uk-UA", RO: "ro-RO", HU: "hu-HU", CZ: "cs-CZ", SK: "sk-SK", BG: "bg-BG",
+  RS: "sr-RS", HR: "hr-HR", BA: "bs-BA", SI: "sl-SI", LT: "lt-LT", LV: "lv-LV",
+  EE: "et-EE", GE: "ka-GE", AM: "hy-AM", AZ: "az-AZ", KZ: "kk-KZ", UZ: "uz-UZ",
+  MN: "mn-MN", KH: "km-KH", LA: "lo-LA", MM: "my-MM", SO: "so-SO",
+  MG: "mg-MG", RW: "rw-RW", UG: "lg-UG", MW: "ny-MW", TZ: "sw-KE",
+  IS: "is-IS", MT: "mt-MT", LU: "lb-LU", AL: "sq-AL", MK: "mk-MK", BY: "be-BY",
+};
 
 type TemplateDefinition = {
   id: string;
@@ -626,7 +625,7 @@ const helpArticles = [
   },
   {
     title: "Is my data sent to a server?",
-    body: "Not in this build. Generation runs on-device. Real cloud deployment (Vercel/Netlify) and a live database (Supabase/Firebase) require you to connect your own API credentials — see Settings → Backend status.",
+    body: "Not in this build. Generation runs on-device. Real cloud deployment and a live database on Vercel require you to connect your own project credentials — see the footer for backend status.",
   },
 ];
 
@@ -663,7 +662,6 @@ export default function HomeScreen() {
   const [adminPassword, setAdminPassword] = useState<string>("");
   const [adminError, setAdminError] = useState<string>("");
   const [livePreviewUrl, setLivePreviewUrl] = useState<string>("");
-  const [lastDeployTarget, setLastDeployTarget] = useState<DeployTarget | null>(null);
   const [currentTier, setCurrentTier] = useState<number>(0);
   const [adControls, setAdControls] = useState<Record<string, boolean>>({
     interest: true,
@@ -688,20 +686,52 @@ export default function HomeScreen() {
     void AsyncStorage.setItem("synkrave-ad-controls", JSON.stringify(adControls));
   }, [adControls]);
 
-  // Auto-detect a starting language from the device locale. This is a
-  // best-effort default, not GPS-based "location detection" — no location
-  // permission is requested for this.
+  // Ask for location permission and use the device's actual GPS position
+  // (reverse-geocoded to a country) to pick a sensible starting language —
+  // the same pattern large apps use. If the person declines the permission,
+  // or geocoding fails for any reason, this falls back to the device's own
+  // language setting instead of forcing a request retry.
   useEffect(() => {
-    try {
-      const deviceLocale = Intl.DateTimeFormat().resolvedOptions().locale ?? "en-US";
-      const prefix = deviceLocale.split("-")[0]?.toLowerCase();
-      const match = worldLanguages.find((language) =>
-        language.value.toLowerCase().startsWith(prefix ?? "en"),
-      );
-      if (match) setVoiceLanguage(match.value);
-    } catch {
-      // Fall back silently to the en-US default already in state.
-    }
+    let isMounted = true;
+    const detectLanguageFromLocation = async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") {
+          throw new Error("Location permission not granted");
+        }
+        const position = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Low,
+        });
+        const [place] = await Location.reverseGeocodeAsync({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+        const countryCode = place?.isoCountryCode?.toUpperCase();
+        const mapped = countryCode ? countryToLanguage[countryCode] : undefined;
+        if (mapped && isMounted) {
+          setVoiceLanguage(mapped);
+          return;
+        }
+        throw new Error("No language mapping for detected country");
+      } catch {
+        // Permission denied, location unavailable, or no mapping — fall
+        // back to whatever language the device itself is set to.
+        try {
+          const deviceLocale = Intl.DateTimeFormat().resolvedOptions().locale ?? "en-US";
+          const prefix = deviceLocale.split("-")[0]?.toLowerCase();
+          const match = worldLanguages.find((language) =>
+            language.value.toLowerCase().startsWith(prefix ?? "en"),
+          );
+          if (match && isMounted) setVoiceLanguage(match.value);
+        } catch {
+          // Keep the en-US default already in state.
+        }
+      }
+    };
+    void detectLanguageFromLocation();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const filteredLanguages = useMemo(() => {
@@ -822,12 +852,10 @@ export default function HomeScreen() {
       setActionStatus("Generate an app before deploying it.");
       return;
     }
-    const target = pickDeployTarget(lastDeployTarget);
-    setLastDeployTarget(target);
     const previewUrl = createStandalonePreviewUrl(generatedCode);
     setLivePreviewUrl(previewUrl);
     setActionStatus(
-      `Standalone preview created (demo — labeled as ${target}). Connect a real ${target} API token to make this a live deployment.`,
+      `Standalone preview created (demo). Connect a real ${HOSTING_PROVIDER} API token to make this a live deployment.`,
     );
   };
 
@@ -1050,10 +1078,8 @@ export default function HomeScreen() {
 
   const handleContactSupport = async () => {
     const result = await openSupportEmail("Synkrave support request");
-    if (result === "primary") {
+    if (result === "opened") {
       setActionStatus(`Opened mail app to ${SUPPORT_EMAIL_PRIMARY}.`);
-    } else if (result === "fallback") {
-      setActionStatus(`Primary inbox unavailable — opened mail app to ${SUPPORT_EMAIL_FALLBACK} instead.`);
     } else {
       setActionStatus("No mail app is configured on this device.");
     }
@@ -1617,9 +1643,15 @@ export default function HomeScreen() {
             <Text style={[styles.footerText, { color: colors.mutedForeground }]}>Secured connection (HTTPS)</Text>
           </View>
           <View style={styles.footerRow}>
-            <Feather name={isBackendConnected ? "database" : "database"} size={12} color={isBackendConnected ? colors.primary : colors.mutedForeground} />
+            <Feather name="cloud" size={12} color={colors.mutedForeground} />
+            <Text style={[styles.footerText, { color: colors.mutedForeground }]}>
+              Hosting: {HOSTING_PROVIDER}
+            </Text>
+          </View>
+          <View style={styles.footerRow}>
+            <Feather name="database" size={12} color={isBackendConnected ? colors.primary : colors.mutedForeground} />
             <Text style={[styles.footerText, { color: isBackendConnected ? colors.primary : colors.mutedForeground }]}>
-              Backend: {isBackendConnected ? "Connected" : "Not connected — add Supabase keys"}
+              Database: {isBackendConnected ? "Connected" : "Not connected — add your database URL"}
             </Text>
           </View>
         </View>
@@ -1871,9 +1903,9 @@ export default function HomeScreen() {
               <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>BACKEND STATUS</Text>
               <View style={[styles.controlsCard, { backgroundColor: colors.background }]}>
                 <Text style={[styles.controlsDescription, { color: colors.mutedForeground }]}>
-                  Supabase: {BACKEND_CONFIG.supabaseUrl ? "URL set" : "Not configured"} · Firebase project:{" "}
-                  {BACKEND_CONFIG.firebaseProjectId || "Not configured"}. Add real credentials via environment
-                  variables to move off demo mode.
+                  Hosting: {HOSTING_PROVIDER} · Database: {BACKEND_CONFIG.databaseUrl ? "URL set" : "Not configured"}.
+                  Add a real database URL as an environment variable in your Vercel project settings to move off
+                  demo mode.
                 </Text>
               </View>
               <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>SHARIAH-COMPLIANT AD CONTROLS</Text>
@@ -2016,7 +2048,7 @@ const styles = StyleSheet.create({
   fileChipRow: { flexDirection: "row", gap: 7 },
   fileChip: { alignItems: "center", borderRadius: 11, flex: 1, flexDirection: "row", gap: 7, minHeight: 48, paddingHorizontal: 8 },
   fileChipCopy: { flex: 1 },
-  fileChipName: { fontFamily: "Inter_600SemiBold", fontSize: 10 },
+  fileChipName: { fontFamily: "Inter_600SemiBold",fontSize: 10 },
   fileChipSize: { fontFamily: "Inter_400Regular", fontSize: 9, marginTop: 3 },
   businessActions: { flexDirection: "row", gap: 10, marginTop: 12 },
   secondaryAction: { alignItems: "center", borderRadius: 13, borderWidth: 1, flex: 1, flexDirection: "row", gap: 7, justifyContent: "center", minHeight: 48, paddingHorizontal: 10 },
@@ -2029,19 +2061,13 @@ const styles = StyleSheet.create({
   liveLinkTitle: { fontFamily: "Inter_600SemiBold", fontSize: 13 },
   liveLinkBadge: { borderRadius: 99, paddingHorizontal: 8, paddingVertical: 5 },
   liveLinkBadgeText: { fontFamily: "Inter_700Bold", fontSize: 9, letterSpacing: 0.7 },
-  liv  liveLinkUrl: { 
-    fontFamily: Platform.select({
-      ios: "Inter_400Regular", // یا جو بھی آپ کا ڈیفالٹ فونٹ ہے
-      android: "Inter_400Regular",
-    }),
-  },
-  openPreviewButton: { alignItems: "center" },
-  openPreviewText: { fontFamily: "Inter_600SemiBold" },
-  chatCard: { borderRadius: 18, borderWidth: 1 },
+  liveLinkUrl: { fontFamily: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }), fontSize: 10, lineHeight: 15, marginTop: 11 },
+  openPreviewButton: { alignItems: "center", borderRadius: 10, flexDirection: "row", gap: 7, justifyContent: "center", marginTop: 12, minHeight: 40 },
+  openPreviewText: { fontFamily: "Inter_600SemiBold", fontSize: 12 },
+  chatCard: { borderRadius: 18, borderWidth: 1, marginTop: 18, padding: 14 },
   chatHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
-  chatTitle: { fontFamily: "Inter_600SemiBold", fontSize: 18 },
-  chatInput: { borderRadius: 12, borderWidth: 1 },
-
+  chatTitle: { fontFamily: "Inter_600SemiBold", fontSize: 18, letterSpacing: -0.4, marginTop: 5 },
+  chatInput: { borderRadius: 12, borderWidth: 1, fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 19, marginTop: 14, minHeight: 72, paddingHorizontal: 12, paddingVertical: 10 },
   chatActions: { alignItems: "center", flexDirection: "row", gap: 8, justifyContent: "flex-end", marginTop: 10 },
   chatIconButton: { alignItems: "center", borderRadius: 10, height: 38, justifyContent: "center", width: 38 },
   bugFixButton: { alignItems: "center", borderRadius: 10, flexDirection: "row", gap: 6, height: 38, paddingHorizontal: 10 },
