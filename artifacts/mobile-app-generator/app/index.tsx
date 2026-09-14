@@ -2033,7 +2033,11 @@ const styles = StyleSheet.create({
   testerTitle: { fontFamily: "Inter_600SemiBold", fontSize: 12 },
   testerDescription: { fontFamily: "Inter_400Regular", fontSize: 10, marginTop: 2 },
   testerButton: { alignItems: "center", borderRadius: 10, flexDirection: "row", gap: 6, minHeight: 34, paddingHorizontal: 10 },
-  testerButtonText: { fontFamily: "Inter_700Bold", fontSize: 10 },
+  testerButtonText: { chatTitle: {
+  fontFamily: "Inter_600SemiBold",
+  fontSize: 18
+},
+chatHeader: {
   webView: { backgroundColor: "#0B1119", height: 360, width: "100%" },
   emptyOutput: { alignItems: "center", justifyContent: "center", minHeight: 190, paddingHorizontal: 30 },
   outputIcon: { alignItems: "center", borderRadius: 13, height: 44, justifyContent: "center", width: 44 },
