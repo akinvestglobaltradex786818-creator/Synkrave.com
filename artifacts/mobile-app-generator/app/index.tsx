@@ -2029,13 +2029,19 @@ const styles = StyleSheet.create({
   liveLinkTitle: { fontFamily: "Inter_600SemiBold", fontSize: 13 },
   liveLinkBadge: { borderRadius: 99, paddingHorizontal: 8, paddingVertical: 5 },
   liveLinkBadgeText: { fontFamily: "Inter_700Bold", fontSize: 9, letterSpacing: 0.7 },
-  liveLinkUrl: { fontFamily: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }), fontSize: 10, lineHeight: 15, marginTop: 11 },
-  openPreviewButton: { alignItems: "center", borderRadius: 10, flexDirection: "row", gap: 7, justifyContent: "center", marginTop: 12, minHeight: 40 },
-  openPreviewText: { fontFamily: "Inter_600SemiBold", fontSize: 12 },
-  chatCard: { borderRadius: 18, borderWidth: 1, marginTop: 18, padding: 14 },
+  liv  liveLinkUrl: { 
+    fontFamily: Platform.select({
+      ios: "Inter_400Regular", // یا جو بھی آپ کا ڈیفالٹ فونٹ ہے
+      android: "Inter_400Regular",
+    }),
+  },
+  openPreviewButton: { alignItems: "center" },
+  openPreviewText: { fontFamily: "Inter_600SemiBold" },
+  chatCard: { borderRadius: 18, borderWidth: 1 },
   chatHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
-  chatTitle: { fontFamily: "Inter_600SemiBold", fontSize: 18,letterSpacing: -0.4, marginTop: 5 },
-  chatInput: { borderRadius: 12, borderWidth: 1, fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 19, marginTop: 14, minHeight: 72, paddingHorizontal: 12, paddingVertical: 10 },
+  chatTitle: { fontFamily: "Inter_600SemiBold", fontSize: 18 },
+  chatInput: { borderRadius: 12, borderWidth: 1 },
+
   chatActions: { alignItems: "center", flexDirection: "row", gap: 8, justifyContent: "flex-end", marginTop: 10 },
   chatIconButton: { alignItems: "center", borderRadius: 10, height: 38, justifyContent: "center", width: 38 },
   bugFixButton: { alignItems: "center", borderRadius: 10, flexDirection: "row", gap: 6, height: 38, paddingHorizontal: 10 },
