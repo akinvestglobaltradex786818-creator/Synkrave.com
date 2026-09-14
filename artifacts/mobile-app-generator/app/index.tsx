@@ -2040,7 +2040,13 @@ const styles = StyleSheet.create({
   emptyTitle: { fontFamily: "Inter_600SemiBold", fontSize: 15, marginTop: 13 },
   emptyText: { fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 20, marginTop: 6, textAlign: "center" },
   codeContent: { padding: 18 },
-  codeText: { fontFamily: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }), fontSize: 13, lineHeight: 21 },
+    codeText: {
+  fontFamily: Platform.select({
+    ios: "Menlo",
+    android: "monospace",
+    default: "monospace",
+  }),
+}, fontSize: 13, lineHeight: 21 },
   fileOutputSection: { marginTop: 14 },
   fileOutputHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
   fileOutputTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
