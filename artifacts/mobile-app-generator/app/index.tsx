@@ -6,9 +6,10 @@ import * as ImagePicker from "expo-image-picker";
 import * as Linking from "expo-linking";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
-import { createElement, useEffect, useRef, useState } from "react";
+import { createElement, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  FlatList,
   Keyboard,
   Modal,
   Platform,
@@ -25,16 +26,245 @@ import { WebView } from "react-native-webview";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 
-const starterPrompts = [
-  "A habit tracker with streaks",
-  "A recipe planner fkor busy weeks",
+/**
+ * ---------------------------------------------------------------------------
+ * BRAND / CONTACT CONFIG
+ * ---------------------------------------------------------------------------
+ * These are UI-level placeholders only. Nothing here talks to a real mail
+ * server, DNS record, or certificate authority. `openSupportEmail` opens the
+ * device's own mail app via a mailto: link — it does not "route" anything on
+ * a server. If the primary mail intent can't be opened, it falls back to the
+ * secondary inbox by opening a second mailto: link. That is the full extent
+ * of what a client-only app can honestly do for "failover" email.
+ * ---------------------------------------------------------------------------
+ */
+const BRAND_DOMAIN = "https://synkrave.com";
+const SUPPORT_EMAIL_PRIMARY = "support@synkrave.com";
+const SUPPORT_EMAIL_FALLBACK = "akramaliaa1638507@gmail.com";
+
+const openSupportEmail = async (subject: string) => {
+  const primaryUrl = `mailto:${SUPPORT_EMAIL_PRIMARY}?subject=${encodeURIComponent(subject)}`;
+  try {
+    const canOpen = await Linking.canOpenURL(primaryUrl);
+    if (!canOpen) throw new Error("No mail client for primary address");
+    await Linking.openURL(primaryUrl);
+    return "primary";
+  } catch (primaryError) {
+    console.warn(
+      "[Synkrave] Primary support channel unreachable, falling back:",
+      primaryError,
+    );
+    try {
+      const fallbackUrl = `mailto:${SUPPORT_EMAIL_FALLBACK}?subject=${encodeURIComponent(subject)}`;
+      await Linking.openURL(fallbackUrl);
+      return "fallback";
+    } catch (fallbackError) {
+      console.error(
+        "[Synkrave] Fallback support channel also unreachable:",
+        fallbackError,
+      );
+      return "failed";
+    }
+  }
+};
+
+/**
+ * ---------------------------------------------------------------------------
+ * BACKEND CONFIG (placeholders — not wired to real services)
+ * ---------------------------------------------------------------------------
+ * Real deployment to Vercel/Netlify and a real Supabase/Firebase connection
+ * both require server-side secrets (API tokens, service account keys). A
+ * mobile client cannot and should not hold those directly. These constants
+ * exist so a real backend can be dropped in later without restructuring the
+ * UI. Until then, the app honestly reports itself as "not connected."
+ * ---------------------------------------------------------------------------
+ */
+const BACKEND_CONFIG = {
+  supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ?? "",
+  supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "",
+  firebaseProjectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID ?? "",
+};
+const isBackendConnected = Boolean(
+  BACKEND_CONFIG.supabaseUrl && BACKEND_CONFIG.supabaseAnonKey,
+);
+
+const DEPLOY_TARGETS = ["Vercel", "Netlify"] as const;
+type DeployTarget = (typeof DEPLOY_TARGETS)[number];
+// Naive client-side alternation. Real load balancing / failover between
+// hosting providers has to happen server-side against real deploy APIs.
+const pickDeployTarget = (previous: DeployTarget | null): DeployTarget =>
+  previous === "Vercel" ? "Netlify" : "Vercel";
+
+/**
+ * ---------------------------------------------------------------------------
+ * ENTERPRISE TIERS
+ * ---------------------------------------------------------------------------
+ */
+const TIER_NAMES = [
+  "Free",
+  "Starter",
+  "Growth",
+  "Business",
+  "Enterprise",
+  "Elite",
+] as const;
+
+type EnterpriseModule = {
+  id: string;
+  title: string;
+  description: string;
+  icon: keyof typeof Feather.glyphMap;
+  requiredTier: number; // index into TIER_NAMES
+};
+
+const enterpriseModules: EnterpriseModule[] = [
+  {
+    id: "support-bot",
+    title: "Automated Customer Support",
+    description: "Deploys a scripted FAQ + handoff chat widget",
+    icon: "message-circle",
+    requiredTier: 1,
+  },
+  {
+    id: "lead-gen",
+    title: "Lead Generation Modules",
+    description: "Capture forms with export-ready lead lists",
+    icon: "target",
+    requiredTier: 2,
+  },
+  {
+    id: "ivr",
+    title: "Interactive Voice System (IVR)",
+    description: "Menu-based call routing script generator",
+    icon: "phone-call",
+    requiredTier: 4,
+  },
+  {
+    id: "ops-engine",
+    title: "Autonomous Business Operation Engine",
+    description: "Order + inventory log templates for your team",
+    icon: "activity",
+    requiredTier: 5,
+  },
 ];
 
-const voiceLanguages = [
-  { label: "English", value: "en-US" },
-  { label: "اردو", value: "ur-PK" },
-  { label: "پښتو", value: "ps-AF" },
-  { label: "中文", value: "zh-CN" },
+/**
+ * ---------------------------------------------------------------------------
+ * LANGUAGES — 100+ entries for the global voice picker
+ * ---------------------------------------------------------------------------
+ */
+const worldLanguages: { label: string; value: string }[] = [
+  { label: "English (US)", value: "en-US" },
+  { label: "English (UK)", value: "en-GB" },
+  { label: "اردو (Urdu)", value: "ur-PK" },
+  { label: "हिन्दी (Hindi)", value: "hi-IN" },
+  { label: "پنجابی (Punjabi)", value: "pa-IN" },
+  { label: "پښتو (Pashto)", value: "ps-AF" },
+  { label: "فارسی (Persian)", value: "fa-IR" },
+  { label: "العربية (Arabic)", value: "ar-SA" },
+  { label: "সিন্ধি (Sindhi)", value: "sd-PK" },
+  { label: "বাংলা (Bengali)", value: "bn-BD" },
+  { label: "中文 (简体)", value: "zh-CN" },
+  { label: "中文 (繁體)", value: "zh-TW" },
+  { label: "日本語 (Japanese)", value: "ja-JP" },
+  { label: "한국어 (Korean)", value: "ko-KR" },
+  { label: "Français", value: "fr-FR" },
+  { label: "Deutsch", value: "de-DE" },
+  { label: "Español (España)", value: "es-ES" },
+  { label: "Español (México)", value: "es-MX" },
+  { label: "Português (Portugal)", value: "pt-PT" },
+  { label: "Português (Brasil)", value: "pt-BR" },
+  { label: "Italiano", value: "it-IT" },
+  { label: "Русский (Russian)", value: "ru-RU" },
+  { label: "Türkçe (Turkish)", value: "tr-TR" },
+  { label: "Nederlands (Dutch)", value: "nl-NL" },
+  { label: "Polski (Polish)", value: "pl-PL" },
+  { label: "Svenska (Swedish)", value: "sv-SE" },
+  { label: "Norsk (Norwegian)", value: "no-NO" },
+  { label: "Dansk (Danish)", value: "da-DK" },
+  { label: "Suomi (Finnish)", value: "fi-FI" },
+  { label: "Ελληνικά (Greek)", value: "el-GR" },
+  { label: "עברית (Hebrew)", value: "he-IL" },
+  { label: "Bahasa Indonesia", value: "id-ID" },
+  { label: "Bahasa Melayu", value: "ms-MY" },
+  { label: "ไทย (Thai)", value: "th-TH" },
+  { label: "Tiếng Việt (Vietnamese)", value: "vi-VN" },
+  { label: "Filipino", value: "fil-PH" },
+  { label: "Kiswahili (Swahili)", value: "sw-KE" },
+  { label: "አማርኛ (Amharic)", value: "am-ET" },
+  { label: "Hausa", value: "ha-NG" },
+  { label: "Yorùbá", value: "yo-NG" },
+  { label: "Igbo", value: "ig-NG" },
+  { label: "isiZulu (Zulu)", value: "zu-ZA" },
+  { label: "isiXhosa (Xhosa)", value: "xh-ZA" },
+  { label: "Afrikaans", value: "af-ZA" },
+  { label: "Українська (Ukrainian)", value: "uk-UA" },
+  { label: "Română (Romanian)", value: "ro-RO" },
+  { label: "Magyar (Hungarian)", value: "hu-HU" },
+  { label: "Čeština (Czech)", value: "cs-CZ" },
+  { label: "Slovenčina (Slovak)", value: "sk-SK" },
+  { label: "Български (Bulgarian)", value: "bg-BG" },
+  { label: "Српски (Serbian)", value: "sr-RS" },
+  { label: "Hrvatski (Croatian)", value: "hr-HR" },
+  { label: "Bosanski (Bosnian)", value: "bs-BA" },
+  { label: "Slovenščina (Slovenian)", value: "sl-SI" },
+  { label: "Lietuvių (Lithuanian)", value: "lt-LT" },
+  { label: "Latviešu (Latvian)", value: "lv-LV" },
+  { label: "Eesti (Estonian)", value: "et-EE" },
+  { label: "ქართული (Georgian)", value: "ka-GE" },
+  { label: "Հայերեն (Armenian)", value: "hy-AM" },
+  { label: "Azərbaycanca (Azerbaijani)", value: "az-AZ" },
+  { label: "Қазақша (Kazakh)", value: "kk-KZ" },
+  { label: "Oʻzbekcha (Uzbek)", value: "uz-UZ" },
+  { label: "Türkmençe (Turkmen)", value: "tk-TM" },
+  { label: "Тоҷикӣ (Tajik)", value: "tg-TJ" },
+  { label: "Кыргызча (Kyrgyz)", value: "ky-KG" },
+  { label: "Монгол (Mongolian)", value: "mn-MN" },
+  { label: "नेपाली (Nepali)", value: "ne-NP" },
+  { label: "සිංහල (Sinhala)", value: "si-LK" },
+  { label: "தமிழ் (Tamil)", value: "ta-IN" },
+  { label: "తెలుగు (Telugu)", value: "te-IN" },
+  { label: "ಕನ್ನಡ (Kannada)", value: "kn-IN" },
+  { label: "മലയാളം (Malayalam)", value: "ml-IN" },
+  { label: "मराठी (Marathi)", value: "mr-IN" },
+  { label: "ગુજરાતી (Gujarati)", value: "gu-IN" },
+  { label: "ଓଡ଼ିଆ (Odia)", value: "or-IN" },
+  { label: "অসমীয়া (Assamese)", value: "as-IN" },
+  { label: "کٲشُر (Kashmiri)", value: "ks-IN" },
+  { label: "ខ្មែរ (Khmer)", value: "km-KH" },
+  { label: "ລາວ (Lao)", value: "lo-LA" },
+  { label: "မြန်မာ (Burmese)", value: "my-MM" },
+  { label: "བོད་སྐད (Tibetan)", value: "bo-CN" },
+  { label: "ئۇيغۇرچە (Uyghur)", value: "ug-CN" },
+  { label: "Malagasy", value: "mg-MG" },
+  { label: "Soomaali (Somali)", value: "so-SO" },
+  { label: "ትግርኛ (Tigrinya)", value: "ti-ET" },
+  { label: "Oromoo (Oromo)", value: "om-ET" },
+  { label: "Wolof", value: "wo-SN" },
+  { label: "Akan / Twi", value: "ak-GH" },
+  { label: "chiShona (Shona)", value: "sn-ZW" },
+  { label: "Chichewa", value: "ny-MW" },
+  { label: "Kinyarwanda", value: "rw-RW" },
+  { label: "Luganda", value: "lg-UG" },
+  { label: "Sesotho", value: "st-ZA" },
+  { label: "Setswana", value: "tn-ZA" },
+  { label: "Vosa Vakaviti (Fijian)", value: "fj-FJ" },
+  { label: "Gagana Samoa (Samoan)", value: "sm-WS" },
+  { label: "Lea Fakatonga (Tongan)", value: "to-TO" },
+  { label: "Te Reo Māori", value: "mi-NZ" },
+  { label: "ʻŌlelo Hawaiʻi (Hawaiian)", value: "haw-US" },
+  { label: "Íslenska (Icelandic)", value: "is-IS" },
+  { label: "Gaeilge (Irish)", value: "ga-IE" },
+  { label: "Cymraeg (Welsh)", value: "cy-GB" },
+  { label: "Gàidhlig (Scottish Gaelic)", value: "gd-GB" },
+  { label: "Malti (Maltese)", value: "mt-MT" },
+  { label: "Euskara (Basque)", value: "eu-ES" },
+  { label: "Català (Catalan)", value: "ca-ES" },
+  { label: "Galego (Galician)", value: "gl-ES" },
+  { label: "Lëtzebuergesch (Luxembourgish)", value: "lb-LU" },
+  { label: "Shqip (Albanian)", value: "sq-AL" },
+  { label: "Македонски (Macedonian)", value: "mk-MK" },
+  { label: "Беларуская (Belarusian)", value: "be-BY" },
 ];
 
 type TemplateDefinition = {
@@ -45,6 +275,11 @@ type TemplateDefinition = {
   icon: keyof typeof Feather.glyphMap;
   locked: boolean;
 };
+
+const starterPrompts = [
+  "A habit tracker with streaks",
+  "A recipe planner for busy weeks",
+];
 
 const templateCatalog: TemplateDefinition[] = [
   {
@@ -152,12 +387,7 @@ const templateCatalog: TemplateDefinition[] = [
   },
 ];
 
-type GeneratedFiles = {
-  html: string;
-  css: string;
-  js: string;
-};
-
+type GeneratedFiles = { html: string; css: string; js: string };
 type SpeechTarget = "prompt" | "chat";
 
 type SpeechRecognitionLike = {
@@ -197,20 +427,8 @@ const splitGeneratedFiles = (documentHtml: string): GeneratedFiles => {
       '<link rel="stylesheet" href="styles.css" />',
     )
     .replace(scriptMatch?.[0] ?? "", '<script src="script.js"></script>');
-
   return { html, css, js };
 };
-
-const composeGeneratedFiles = (files: GeneratedFiles) =>
-  files.html
-    .replace(
-      '<link rel="stylesheet" href="styles.css" />',
-      `<style>${files.css}</style>`,
-    )
-    .replace(
-      '<script src="script.js"></script>',
-      `<script>${files.js}</script>`,
-    );
 
 const localGenerateApp = (idea: string): Promise<string> =>
   new Promise((resolve) => {
@@ -243,41 +461,14 @@ function buildLocalApp(idea: string): string {
         background: linear-gradient(145deg, #151d28, #11151d);
         box-shadow: 0 24px 70px rgba(0, 0, 0, 0.3);
       }
-      .eyebrow {
-        margin: 0 0 10px;
-        color: #6ee7f9;
-        font-size: 12px;
-        font-weight: 700;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-      }
+      .eyebrow { margin: 0 0 10px; color: #6ee7f9; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
       h1 { margin: 0 0 10px; font-size: 30px; letter-spacing: -0.04em; }
       h2 { margin: 0; font-size: 18px; }
       p { margin: 0 0 22px; color: #a9b5c5; line-height: 1.6; }
-      .muted { color: #a9b5c5; }
-      button {
-        border: 0;
-        border-radius: 12px;
-        padding: 13px 18px;
-        background: #6ee7f9;
-        color: #071016;
-        cursor: pointer;
-        font: inherit;
-        font-weight: 700;
-        transition: transform 160ms ease, background 160ms ease;
-      }
+      button { border: 0; border-radius: 12px; padding: 13px 18px; background: #6ee7f9; color: #071016; cursor: pointer; font: inherit; font-weight: 700; transition: transform 160ms ease, background 160ms ease; }
       button:hover { background: #a0f2ff; transform: translateY(-1px); }
       .status { min-height: 22px; margin: 14px 0 0; color: #6ee7f9; font-size: 14px; }
-      input {
-        width: 100%;
-        margin: 0 0 12px;
-        border: 1px solid #26313f;
-        border-radius: 12px;
-        padding: 13px;
-        background: #0b1119;
-        color: #f4f7ff;
-        font: inherit;
-      }
+      input { width: 100%; margin: 0 0 12px; border: 1px solid #26313f; border-radius: 12px; padding: 13px; background: #0b1119; color: #f4f7ff; font: inherit; }
       .row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
       .surface { border: 1px solid #26313f; border-radius: 16px; background: #0b1119; }
       .pill { display: inline-flex; padding: 6px 10px; border-radius: 99px; background: #253849; color: #6ee7f9; font-size: 12px; font-weight: 700; }
@@ -308,9 +499,7 @@ function buildLocalApp(idea: string): string {
 
   let templateKey: string;
   switch (true) {
-    case /corporate|business site|company|services|website/.test(
-      normalizedIdea,
-    ):
+    case /corporate|business site|company|services|website/.test(normalizedIdea):
       templateKey = "landing";
       break;
     case /financial|finance|revenue|cash flow|kpi/.test(normalizedIdea):
@@ -322,9 +511,7 @@ function buildLocalApp(idea: string): string {
     case /real estate|property|listing|home search/.test(normalizedIdea):
       templateKey = "card";
       break;
-    case /education|educational|course|lesson|learning|school/.test(
-      normalizedIdea,
-    ):
+    case /education|educational|course|lesson|learning|school/.test(normalizedIdea):
       templateKey = "tasks";
       break;
     case /custom|other/.test(normalizedIdea):
@@ -359,186 +546,89 @@ function buildLocalApp(idea: string): string {
     case "profile":
       return page(
         "Profile Card",
-        `
-      .avatar { display: grid; width: 72px; height: 72px; margin-bottom: 22px; place-items: center; border-radius: 24px; background: linear-gradient(135deg, #6ee7f9, #8b7cff); color: #071016; font-size: 22px; font-weight: 800; }
-      .meta { display: flex; gap: 8px; margin-bottom: 24px; }`,
-        `<main class="shell">
-      <div class="avatar">AM</div>
-      <p class="eyebrow">Profile card</p>
-      <h1>Alex Morgan</h1>
-      <p>Product designer building calm, useful digital experiences for thoughtful teams.</p>
-      <div class="meta"><span class="pill">Design</span><span class="pill">Available</span></div>
-      <button id="follow-button" type="button">Follow Alex</button>
-      <p id="status" class="status" aria-live="polite"></p>
-    </main>`,
-        `const button = document.querySelector('#follow-button');
-      const status = document.querySelector('#status');
-      button.addEventListener('click', () => {
-        const following = button.textContent === 'Following';
-        button.textContent = following ? 'Follow Alex' : 'Following';
-        status.textContent = following ? 'You unfollowed Alex.' : 'You are now following Alex.';
-      });`,
+        `.avatar { display: grid; width: 72px; height: 72px; margin-bottom: 22px; place-items: center; border-radius: 24px; background: linear-gradient(135deg, #6ee7f9, #8b7cff); color: #071016; font-size: 22px; font-weight: 800; } .meta { display: flex; gap: 8px; margin-bottom: 24px; }`,
+        `<main class="shell"><div class="avatar">AM</div><p class="eyebrow">Profile card</p><h1>Alex Morgan</h1><p>Product designer building calm, useful digital experiences for thoughtful teams.</p><div class="meta"><span class="pill">Design</span><span class="pill">Available</span></div><button id="follow-button" type="button">Follow Alex</button><p id="status" class="status" aria-live="polite"></p></main>`,
+        `const button = document.querySelector('#follow-button'); const status = document.querySelector('#status'); button.addEventListener('click', () => { const following = button.textContent === 'Following'; button.textContent = following ? 'Follow Alex' : 'Following'; status.textContent = following ? 'You unfollowed Alex.' : 'You are now following Alex.'; });`,
       );
     case "login":
       return page(
         "Welcome Back",
-        `
-      .form-copy { margin-bottom: 26px; }
-      .form-copy p { margin-bottom: 0; }
-      .links { display: flex; justify-content: space-between; margin-top: 18px; color: #6ee7f9; font-size: 13px; }`,
-        `<main class="shell">
-      <p class="eyebrow">Welcome back</p>
-      <h1>Sign in to continue.</h1>
-      <div class="form-copy"><p>Pick up where you left off and keep building.</p></div>
-      <form id="login-form">
-        <input id="email" type="email" placeholder="Email address" required />
-        <input id="password" type="password" placeholder="Password" required />
-        <button class="full" type="submit">Sign in</button>
-      </form>
-      <div class="links"><span>New here?</span><span>Create an account</span></div>
-      <p id="status" class="status" aria-live="polite"></p>
-    </main>`,
-        `document.querySelector('#login-form').addEventListener('submit', (event) => {
-        event.preventDefault();
-        document.querySelector('#status').textContent = 'Signed in successfully — welcome back.';
-      });`,
+        `.form-copy { margin-bottom: 26px; } .form-copy p { margin-bottom: 0; } .links { display: flex; justify-content: space-between; margin-top: 18px; color: #6ee7f9; font-size: 13px; }`,
+        `<main class="shell"><p class="eyebrow">Welcome back</p><h1>Sign in to continue.</h1><div class="form-copy"><p>Pick up where you left off and keep building.</p></div><form id="login-form"><input id="email" type="email" placeholder="Email address" required /><input id="password" type="password" placeholder="Password" required /><button class="full" type="submit">Sign in</button></form><div class="links"><span>New here?</span><span>Create an account</span></div><p id="status" class="status" aria-live="polite"></p></main>`,
+        `document.querySelector('#login-form').addEventListener('submit', (event) => { event.preventDefault(); document.querySelector('#status').textContent = 'Signed in successfully — welcome back.'; });`,
       );
     case "dashboard":
       return page(
         "Project Dashboard",
-        `
-      .dashboard-head { margin-bottom: 24px; }
-      .grid { margin-bottom: 20px; }
-      .activity { padding: 18px; }
-      .activity p { margin: 8px 0 0; font-size: 14px; }`,
-        `<main class="shell">
-      <div class="row dashboard-head"><div><p class="eyebrow">Overview</p><h1>Good morning, Alex.</h1></div><span class="pill">Live</span></div>
-      <div class="grid">
-        <div class="surface stat"><span>Active projects</span><strong>12</strong></div>
-        <div class="surface stat"><span>Completed this week</span><strong>28</strong></div>
-      </div>
-      <div class="surface activity"><h2>Recent activity</h2><p>Design system updated · 8 minutes ago</p><p>New project created · 42 minutes ago</p></div>
-      <button id="project-button" class="full" type="button" style="margin-top: 18px;">Create project</button>
-      <p id="status" class="status" aria-live="polite"></p>
-    </main>`,
-        `document.querySelector('#project-button').addEventListener('click', () => {
-        document.querySelector('#status').textContent = 'New project draft created.';
-      });`,
+        `.dashboard-head { margin-bottom: 24px; } .grid { margin-bottom: 20px; } .activity { padding: 18px; } .activity p { margin: 8px 0 0; font-size: 14px; }`,
+        `<main class="shell"><div class="row dashboard-head"><div><p class="eyebrow">Overview</p><h1>Good morning, Alex.</h1></div><span class="pill">Live</span></div><div class="grid"><div class="surface stat"><span>Active projects</span><strong>12</strong></div><div class="surface stat"><span>Completed this week</span><strong>28</strong></div></div><div class="surface activity"><h2>Recent activity</h2><p>Design system updated · 8 minutes ago</p><p>New project created · 42 minutes ago</p></div><button id="project-button" class="full" type="button" style="margin-top: 18px;">Create project</button><p id="status" class="status" aria-live="polite"></p></main>`,
+        `document.querySelector('#project-button').addEventListener('click', () => { document.querySelector('#status').textContent = 'New project draft created.'; });`,
       );
     case "button":
       return page(
         "Button Showcase",
-        `
-      .button-stack { display: grid; gap: 12px; margin-top: 24px; }
-      .secondary { background: #253849; color: #d6e3f0; }
-      .outline { border: 1px solid #6ee7f9; background: transparent; color: #6ee7f9; }`,
-        `<main class="shell">
-      <p class="eyebrow">Interaction kit</p>
-      <h1>Buttons that invite action.</h1>
-      <p>Three flexible states for a clear, confident interface.</p>
-      <div class="button-stack">
-        <button id="primary-button" type="button">Primary action</button>
-        <button class="secondary" id="secondary-button" type="button">Secondary action</button>
-        <button class="outline" id="outline-button" type="button">Learn more</button>
-      </div>
-      <p id="status" class="status" aria-live="polite"></p>
-    </main>`,
-        `document.querySelectorAll('button').forEach((button) => {
-        button.addEventListener('click', () => {
-          document.querySelector('#status').textContent = button.textContent + ' selected.';
-        });
-      });`,
+        `.button-stack { display: grid; gap: 12px; margin-top: 24px; } .secondary { background: #253849; color: #d6e3f0; } .outline { border: 1px solid #6ee7f9; background: transparent; color: #6ee7f9; }`,
+        `<main class="shell"><p class="eyebrow">Interaction kit</p><h1>Buttons that invite action.</h1><p>Three flexible states for a clear, confident interface.</p><div class="button-stack"><button id="primary-button" type="button">Primary action</button><button class="secondary" id="secondary-button" type="button">Secondary action</button><button class="outline" id="outline-button" type="button">Learn more</button></div><p id="status" class="status" aria-live="polite"></p></main>`,
+        `document.querySelectorAll('button').forEach((button) => { button.addEventListener('click', () => { document.querySelector('#status').textContent = button.textContent + ' selected.'; }); });`,
       );
     case "tasks":
       return page(
         "Task List",
-        `
-      form { display: flex; gap: 8px; }
-      form input { flex: 1; margin: 0; }
-      ul { display: grid; gap: 10px; margin: 22px 0 0; padding: 0; list-style: none; }
-      li { display: flex; justify-content: space-between; padding: 13px 14px; border-radius: 12px; background: #19212b; color: #d6e3f0; }
-      li.done { color: #6d7d8e; text-decoration: line-through; }`,
-        `<main class="shell">
-      <p class="eyebrow">Daily focus</p>
-      <h1>Small steps, every day.</h1>
-      <p>Keep the next useful thing within reach.</p>
-      <form id="task-form"><input id="task-input" aria-label="New task" placeholder="Add a task" /><button type="submit">Add</button></form>
-      <ul id="task-list"><li>Plan the next step <span>✓</span></li><li>Take a focused break <span>○</span></li></ul>
-    </main>`,
-        `const form = document.querySelector('#task-form');
-      const input = document.querySelector('#task-input');
-      const list = document.querySelector('#task-list');
-      form.addEventListener('submit', (event) => {
-        event.preventDefault();
-        const value = input.value.trim();
-        if (!value) return;
-        const item = document.createElement('li');
-        const label = document.createTextNode(value);
-        const marker = document.createElement('span');
-        marker.textContent = '○';
-        item.append(label, marker);
-        item.addEventListener('click', () => item.classList.toggle('done'));
-        list.appendChild(item);
-        input.value = '';
-      });`,
+        `form { display: flex; gap: 8px; } form input { flex: 1; margin: 0; } ul { display: grid; gap: 10px; margin: 22px 0 0; padding: 0; list-style: none; } li { display: flex; justify-content: space-between; padding: 13px 14px; border-radius: 12px; background: #19212b; color: #d6e3f0; } li.done { color: #6d7d8e; text-decoration: line-through; }`,
+        `<main class="shell"><p class="eyebrow">Daily focus</p><h1>Small steps, every day.</h1><p>Keep the next useful thing within reach.</p><form id="task-form"><input id="task-input" aria-label="New task" placeholder="Add a task" /><button type="submit">Add</button></form><ul id="task-list"><li>Plan the next step <span>✓</span></li><li>Take a focused break <span>○</span></li></ul></main>`,
+        `const form = document.querySelector('#task-form'); const input = document.querySelector('#task-input'); const list = document.querySelector('#task-list'); form.addEventListener('submit', (event) => { event.preventDefault(); const value = input.value.trim(); if (!value) return; const item = document.createElement('li'); const label = document.createTextNode(value); const marker = document.createElement('span'); marker.textContent = '○'; item.append(label, marker); item.addEventListener('click', () => item.classList.toggle('done')); list.appendChild(item); input.value = ''; });`,
       );
     case "pricing":
       return page(
         "Pricing Card",
-        `
-      .price { margin: 8px 0 18px; font-size: 48px; font-weight: 800; letter-spacing: -0.06em; }
-      .price span { color: #a9b5c5; font-size: 14px; font-weight: 400; letter-spacing: 0; }
-      ul { margin: 0 0 24px; padding-left: 20px; color: #a9b5c5; line-height: 2; }`,
-        `<main class="shell">
-      <p class="eyebrow">Simple pricing</p><h1>Starter plan</h1>
-      <p class="price">$12 <span>/ month</span></p>
-      <ul><li>Unlimited projects</li><li>Shared workspaces</li><li>Priority support</li></ul>
-      <button id="choose-button" type="button">Choose starter</button>
-      <p id="status" class="status" aria-live="polite"></p>
-    </main>`,
-        `document.querySelector('#choose-button').addEventListener('click', (event) => {
-        event.currentTarget.textContent = 'Selected';
-        document.querySelector('#status').textContent = 'Starter plan selected.';
-      });`,
+        `.price { margin: 8px 0 18px; font-size: 48px; font-weight: 800; letter-spacing: -0.06em; } .price span { color: #a9b5c5; font-size: 14px; font-weight: 400; letter-spacing: 0; } ul { margin: 0 0 24px; padding-left: 20px; color: #a9b5c5; line-height: 2; }`,
+        `<main class="shell"><p class="eyebrow">Simple pricing</p><h1>Starter plan</h1><p class="price">$12 <span>/ month</span></p><ul><li>Unlimited projects</li><li>Shared workspaces</li><li>Priority support</li></ul><button id="choose-button" type="button">Choose starter</button><p id="status" class="status" aria-live="polite"></p></main>`,
+        `document.querySelector('#choose-button').addEventListener('click', (event) => { event.currentTarget.textContent = 'Selected'; document.querySelector('#status').textContent = 'Starter plan selected.'; });`,
       );
     case "landing":
       return page(
         "Landing Page",
-        `
-      .shell { text-align: center; }
-      h1 { font-size: 42px; }
-      .glow { color: #6ee7f9; }`,
-        `<main class="shell">
-      <p class="eyebrow">Coming soon</p>
-      <h1>Build something <span class="glow">worth sharing.</span></h1>
-      <p>Join the early list for a quieter way to turn ideas into products.</p>
-      <button id="join-button" type="button">Join the waitlist</button>
-      <p id="status" class="status" aria-live="polite"></p>
-    </main>`,
-        `document.querySelector('#join-button').addEventListener('click', (event) => {
-        event.currentTarget.textContent = 'You are on the list';
-        document.querySelector('#status').textContent = 'Thanks — we will be in touch.';
-      });`,
+        `.shell { text-align: center; } h1 { font-size: 42px; } .glow { color: #6ee7f9; }`,
+        `<main class="shell"><p class="eyebrow">Coming soon</p><h1>Build something <span class="glow">worth sharing.</span></h1><p>Join the early list for a quieter way to turn ideas into products.</p><button id="join-button" type="button">Join the waitlist</button><p id="status" class="status" aria-live="polite"></p></main>`,
+        `document.querySelector('#join-button').addEventListener('click', (event) => { event.currentTarget.textContent = 'You are on the list'; document.querySelector('#status').textContent = 'Thanks — we will be in touch.'; });`,
       );
     case "card":
     default:
       return page(
         "Generated App",
         `.card-label { display: inline-block; margin-bottom: 16px; color: #6ee7f9; font-weight: 700; }`,
-        `<main class="shell">
-      <span class="card-label">Offline starter</span>
-      <h1>Your idea, in motion.</h1>
-      <p>${safeIdea}</p>
-      <button id="action-button" type="button">Get started</button>
-      <p id="status" class="status" aria-live="polite"></p>
-    </main>`,
-        `document.querySelector('#action-button').addEventListener('click', (event) => {
-        event.currentTarget.textContent = 'Started';
-        document.querySelector('#status').textContent = 'Your first action is working.';
-      });`,
+        `<main class="shell"><span class="card-label">Offline starter</span><h1>Your idea, in motion.</h1><p>${safeIdea}</p><button id="action-button" type="button">Get started</button><p id="status" class="status" aria-live="polite"></p></main>`,
+        `document.querySelector('#action-button').addEventListener('click', (event) => { event.currentTarget.textContent = 'Started'; document.querySelector('#status').textContent = 'Your first action is working.'; });`,
       );
   }
 }
+
+const helpArticles = [
+  {
+    title: "1. Describe your app",
+    body: "Type your idea into the composer, or tap the mic and speak in any of the 100+ supported languages. Keep it to one clear sentence for the best first draft.",
+  },
+  {
+    title: "2. Generate a first draft",
+    body: "Tap Generate App. Synkrave builds an offline starter (HTML/CSS/JS) in your device — no data leaves your phone during this step.",
+  },
+  {
+    title: "3. Refine with AI Chat",
+    body: "Use the follow-up box to ask for changes in plain language, e.g. 'make the hero warmer' or 'add a pricing table'.",
+  },
+  {
+    title: "4. Preview, download, or deploy",
+    body: "Switch to the live preview, download the three source files to your device, or create a shareable standalone preview link.",
+  },
+  {
+    title: "5. Enterprise modules",
+    body: "Support bots, lead capture, IVR scripts, and the operations engine unlock by tier. These currently generate deployment-ready templates — connecting them to a live phone line, ad account, or payment processor requires your own backend and provider accounts.",
+  },
+  {
+    title: "Is my data sent to a server?",
+    body: "Not in this build. Generation runs on-device. Real cloud deployment (Vercel/Netlify) and a live database (Supabase/Firebase) require you to connect your own API credentials — see Settings → Backend status.",
+  },
+];
 
 export default function HomeScreen() {
   const colors = useColors();
@@ -546,25 +636,20 @@ export default function HomeScreen() {
   const [prompt, setPrompt] = useState<string>("");
   const [isFocused, setIsFocused] = useState<boolean>(false);
   const [isListening, setIsListening] = useState<boolean>(false);
-  const [listeningTarget, setListeningTarget] = useState<SpeechTarget | null>(
-    null,
-  );
+  const [listeningTarget, setListeningTarget] = useState<SpeechTarget | null>(null);
   const [voiceLanguage, setVoiceLanguage] = useState<string>("en-US");
+  const [languagePickerVisible, setLanguagePickerVisible] = useState<boolean>(false);
+  const [languageSearch, setLanguageSearch] = useState<string>("");
+  const [helpVisible, setHelpVisible] = useState<boolean>(false);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [generatedCode, setGeneratedCode] = useState<string>("");
-  const [generatedFiles, setGeneratedFiles] = useState<GeneratedFiles>({
-    html: "",
-    css: "",
-    js: "",
-  });
+  const [generatedFiles, setGeneratedFiles] = useState<GeneratedFiles>({ html: "", css: "", js: "" });
   const [isLivePreview, setIsLivePreview] = useState<boolean>(false);
   const [isTesterRunning, setIsTesterRunning] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [authModalVisible, setAuthModalVisible] = useState<boolean>(false);
-  const [authReason, setAuthReason] = useState<string>(
-    "Unlock professional templates",
-  );
+  const [authReason, setAuthReason] = useState<string>("Unlock professional templates");
   const [authEmail, setAuthEmail] = useState<string>("");
   const [authPassword, setAuthPassword] = useState<string>("");
   const [authError, setAuthError] = useState<string>("");
@@ -573,12 +658,13 @@ export default function HomeScreen() {
   const [isChatSending, setIsChatSending] = useState<boolean>(false);
   const [trialUseCount, setTrialUseCount] = useState<number>(0);
   const [scanImageUri, setScanImageUri] = useState<string>("");
-  const [adminPasswordModalVisible, setAdminPasswordModalVisible] =
-    useState<boolean>(false);
+  const [adminPasswordModalVisible, setAdminPasswordModalVisible] = useState<boolean>(false);
   const [adminPanelVisible, setAdminPanelVisible] = useState<boolean>(false);
   const [adminPassword, setAdminPassword] = useState<string>("");
   const [adminError, setAdminError] = useState<string>("");
   const [livePreviewUrl, setLivePreviewUrl] = useState<string>("");
+  const [lastDeployTarget, setLastDeployTarget] = useState<DeployTarget | null>(null);
+  const [currentTier, setCurrentTier] = useState<number>(0);
   const [adControls, setAdControls] = useState<Record<string, boolean>>({
     interest: true,
     gambling: true,
@@ -587,28 +673,50 @@ export default function HomeScreen() {
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   useEffect(() => {
-    void AsyncStorage.getItem("pocketdev-ad-controls").then(
-      (storedControls) => {
-        if (!storedControls) return;
-        try {
-          const parsedControls = JSON.parse(storedControls) as Record<
-            string,
-            boolean
-          >;
-          setAdControls((current) => ({ ...current, ...parsedControls }));
-        } catch {
-          // Keep the safe default when stored local settings are malformed.
-        }
-      },
-    );
+    void AsyncStorage.getItem("synkrave-ad-controls").then((storedControls) => {
+      if (!storedControls) return;
+      try {
+        const parsedControls = JSON.parse(storedControls) as Record<string, boolean>;
+        setAdControls((current) => ({ ...current, ...parsedControls }));
+      } catch {
+        // Keep the safe default when stored local settings are malformed.
+      }
+    });
   }, []);
 
   useEffect(() => {
-    void AsyncStorage.setItem(
-      "pocketdev-ad-controls",
-      JSON.stringify(adControls),
-    );
+    void AsyncStorage.setItem("synkrave-ad-controls", JSON.stringify(adControls));
   }, [adControls]);
+
+  // Auto-detect a starting language from the device locale. This is a
+  // best-effort default, not GPS-based "location detection" — no location
+  // permission is requested for this.
+  useEffect(() => {
+    try {
+      const deviceLocale = Intl.DateTimeFormat().resolvedOptions().locale ?? "en-US";
+      const prefix = deviceLocale.split("-")[0]?.toLowerCase();
+      const match = worldLanguages.find((language) =>
+        language.value.toLowerCase().startsWith(prefix ?? "en"),
+      );
+      if (match) setVoiceLanguage(match.value);
+    } catch {
+      // Fall back silently to the en-US default already in state.
+    }
+  }, []);
+
+  const filteredLanguages = useMemo(() => {
+    const query = languageSearch.trim().toLowerCase();
+    if (!query) return worldLanguages;
+    return worldLanguages.filter(
+      (language) =>
+        language.label.toLowerCase().includes(query) ||
+        language.value.toLowerCase().includes(query),
+    );
+  }, [languageSearch]);
+
+  const activeLanguageLabel =
+    worldLanguages.find((language) => language.value === voiceLanguage)?.label ??
+    voiceLanguage;
 
   const openAuthModal = (reason: string) => {
     setAuthReason(reason);
@@ -633,13 +741,10 @@ export default function HomeScreen() {
       setAuthError("Use a password with at least 6 characters.");
       return;
     }
-
     setIsAuthenticated(true);
     setAuthModalVisible(false);
     setAuthError("");
-    setActionStatus(
-      "You are signed in. All professional templates are unlocked.",
-    );
+    setActionStatus("You are signed in. All professional templates are unlocked.");
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
@@ -662,13 +767,10 @@ export default function HomeScreen() {
         `${template.title} selected. Free trial ${trialUseCount + 1} of 3 — tap Generate App.`,
       );
     }
-
     setPrompt(template.prompt);
     setError("");
     if (!template.locked || isAuthenticated) {
-      setActionStatus(
-        `${template.title} selected. Tap Generate App to build it.`,
-      );
+      setActionStatus(`${template.title} selected. Tap Generate App to build it.`);
     }
     Haptics.selectionAsync();
   };
@@ -682,7 +784,6 @@ export default function HomeScreen() {
       setActionStatus("Generate an app before downloading its files.");
       return;
     }
-
     if (Platform.OS === "web" && typeof window !== "undefined") {
       [
         ["index.html", generatedFiles.html],
@@ -706,9 +807,7 @@ export default function HomeScreen() {
       indexFile.write(generatedFiles.html);
       stylesFile.write(generatedFiles.css);
       scriptFile.write(generatedFiles.js);
-      setActionStatus(
-        "Saved index.html, styles.css, and script.js to app storage.",
-      );
+      setActionStatus("Saved index.html, styles.css, and script.js to app storage.");
       return;
     }
     setActionStatus("Downloaded index.html, styles.css, and script.js.");
@@ -723,11 +822,12 @@ export default function HomeScreen() {
       setActionStatus("Generate an app before deploying it.");
       return;
     }
-
+    const target = pickDeployTarget(lastDeployTarget);
+    setLastDeployTarget(target);
     const previewUrl = createStandalonePreviewUrl(generatedCode);
     setLivePreviewUrl(previewUrl);
     setActionStatus(
-      "Standalone live preview created. Copy the link to open the generated app in any browser.",
+      `Standalone preview created (demo — labeled as ${target}). Connect a real ${target} API token to make this a live deployment.`,
     );
   };
 
@@ -742,21 +842,15 @@ export default function HomeScreen() {
 
   const handleTester = () => {
     if (!generatedCode) {
-      setActionStatus(
-        "Generate an app before running the AI One-Click Tester.",
-      );
+      setActionStatus("Generate an app before running the AI One-Click Tester.");
       return;
     }
     setIsLivePreview(true);
     setIsTesterRunning(true);
-    setActionStatus(
-      "AI One-Click Tester is running inside the interactive WebView.",
-    );
+    setActionStatus("AI One-Click Tester is running inside the interactive WebView.");
     setTimeout(() => {
       setIsTesterRunning(false);
-      setActionStatus(
-        "AI One-Click Tester completed. Interactive controls are ready.",
-      );
+      setActionStatus("AI One-Click Tester completed. Interactive controls are ready.");
     }, 1200);
   };
 
@@ -775,30 +869,22 @@ export default function HomeScreen() {
     setChatMessage("");
     setIsChatSending(false);
     setIsLivePreview(true);
-    setActionStatus(
-      "AI follow-up applied. The live preview has been refreshed.",
-    );
+    setActionStatus("AI follow-up applied. The live preview has been refreshed.");
   };
 
   const handleBugFix = async () => {
     if (!generatedCode) {
-      setActionStatus(
-        "Generate an app before asking the AI Bug Fixer to repair it.",
-      );
+      setActionStatus("Generate an app before asking the AI Bug Fixer to repair it.");
       return;
     }
     setIsChatSending(true);
-    const repairedHtml = await localGenerateApp(
-      `${prompt} with repaired interactions`,
-    );
+    const repairedHtml = await localGenerateApp(`${prompt} with repaired interactions`);
     const repairedFiles = splitGeneratedFiles(repairedHtml);
     setGeneratedFiles(repairedFiles);
     setGeneratedCode(repairedHtml);
     setIsChatSending(false);
     setIsLivePreview(true);
-    setActionStatus(
-      "AI Bug Fixer rebuilt the template interactions and refreshed the preview.",
-    );
+    setActionStatus("AI Bug Fixer rebuilt the template interactions and refreshed the preview.");
   };
 
   const handleExportGithub = () => {
@@ -822,19 +908,17 @@ export default function HomeScreen() {
       setListeningTarget(null);
       return;
     }
-
     const speechGlobals = globalThis as typeof globalThis & {
       SpeechRecognition?: new () => SpeechRecognitionLike;
       webkitSpeechRecognition?: new () => SpeechRecognitionLike;
     };
-    const Recognition =
-      speechGlobals.SpeechRecognition ?? speechGlobals.webkitSpeechRecognition;
+    const Recognition = speechGlobals.SpeechRecognition ?? speechGlobals.webkitSpeechRecognition;
 
     if (!Recognition) {
       setIsListening(true);
       setListeningTarget(target);
       setActionStatus(
-        `Microphone ready for ${voiceLanguage}. Web speech transcription is available in supported browsers.`,
+        `Microphone ready for ${activeLanguageLabel}. Native speech-to-text needs a provider (e.g. Google Cloud Speech, Whisper) wired in — this demo only transcribes in browsers that expose Web Speech.`,
       );
       Haptics.selectionAsync();
       return;
@@ -851,12 +935,10 @@ export default function HomeScreen() {
       } else {
         setChatMessage(transcript);
       }
-      setActionStatus(`Voice captured in ${voiceLanguage}.`);
+      setActionStatus(`Voice captured in ${activeLanguageLabel}.`);
     };
     recognition.onerror = () => {
-      setActionStatus(
-        "Voice capture could not start. You can type the same request instead.",
-      );
+      setActionStatus("Voice capture could not start. You can type the same request instead.");
     };
     recognition.onend = () => {
       setIsListening(false);
@@ -896,16 +978,10 @@ export default function HomeScreen() {
       if (result.canceled || !result.assets?.[0]?.uri) return;
       const imageUri = result.assets[0].uri;
       setScanImageUri(imageUri);
-      setPrompt(
-        "Recreate this scanned screenshot as a responsive, accessible interface",
-      );
-      setActionStatus(
-        "Screenshot captured. The offline clone scaffold is ready for generation.",
-      );
+      setPrompt("Recreate this scanned screenshot as a responsive, accessible interface");
+      setActionStatus("Screenshot captured. The offline clone scaffold is ready for generation.");
     } catch {
-      setActionStatus(
-        "Camera access was unavailable. Choose a screenshot from your gallery instead.",
-      );
+      setActionStatus("Camera access was unavailable. Choose a screenshot from your gallery instead.");
     }
   };
 
@@ -917,6 +993,10 @@ export default function HomeScreen() {
   };
 
   const handleAdminUnlock = () => {
+    // NOTE: this is a client-side demo gate only. A hardcoded string inside
+    // the app bundle is readable by anyone who decompiles the APK — it is
+    // NOT real access control. Replace with a server-side authenticated
+    // session before shipping anything sensitive behind this screen.
     if (adminPassword !== "admin123") {
       setAdminError("Incorrect admin password.");
       return;
@@ -935,14 +1015,12 @@ export default function HomeScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       return;
     }
-
     setError("");
     setIsGenerating(true);
     setGeneratedCode("");
     setGeneratedFiles({ html: "", css: "", js: "" });
     setIsLivePreview(false);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
     const generatedHtml = await localGenerateApp(prompt);
     setIsGenerating(false);
     setGeneratedCode(generatedHtml);
@@ -956,11 +1034,33 @@ export default function HomeScreen() {
     Haptics.selectionAsync();
   };
 
+  const handleModulePress = (moduleItem: EnterpriseModule) => {
+    if (currentTier < moduleItem.requiredTier) {
+      setActionStatus(
+        `🔒 ${moduleItem.title} requires the ${TIER_NAMES[moduleItem.requiredTier]} tier or higher. This is a demo tier switch — wire up real billing before enforcing this in production.`,
+      );
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      return;
+    }
+    setActionStatus(
+      `${moduleItem.title} queued as a deployable template. Connect a live phone/chat/payment provider to make it operate for real.`,
+    );
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
+  const handleContactSupport = async () => {
+    const result = await openSupportEmail("Synkrave support request");
+    if (result === "primary") {
+      setActionStatus(`Opened mail app to ${SUPPORT_EMAIL_PRIMARY}.`);
+    } else if (result === "fallback") {
+      setActionStatus(`Primary inbox unavailable — opened mail app to ${SUPPORT_EMAIL_FALLBACK} instead.`);
+    } else {
+      setActionStatus("No mail app is configured on this device.");
+    }
+  };
+
   return (
-    <KeyboardAvoidingView
-      behavior="padding"
-      style={[styles.screen, { backgroundColor: colors.background }]}
-    >
+    <KeyboardAvoidingView behavior="padding" style={[styles.screen, { backgroundColor: colors.background }]}>
       <StatusBar style="light" />
       <LinearGradient
         colors={[colors.background, "#0B1119", colors.background]}
@@ -970,10 +1070,7 @@ export default function HomeScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          {
-            paddingTop: insets.top + 18,
-            paddingBottom: Math.max(insets.bottom, 18) + 10,
-          },
+          { paddingTop: insets.top + 18, paddingBottom: Math.max(insets.bottom, 18) + 10 },
         ]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
@@ -985,41 +1082,37 @@ export default function HomeScreen() {
             accessibilityRole="button"
             onLongPress={handleAdminTrigger}
             delayLongPress={900}
-            style={({ pressed }) => [
-              styles.brandRow,
-              { opacity: pressed ? 0.72 : 1 },
-            ]}
+            style={({ pressed }) => [styles.brandRow, { opacity: pressed ? 0.72 : 1 }]}
           >
-            <View
-              style={[styles.brandMark, { backgroundColor: colors.accent }]}
-            >
-              <Feather name="code" size={18} color={colors.primary} />
+            <View style={[styles.brandMark, { backgroundColor: colors.accent }]}>
+              <Feather name="zap" size={18} color={colors.primary} />
             </View>
-            <Text style={[styles.brandName, { color: colors.foreground }]}>
-              appforge
-            </Text>
+            <Text style={[styles.brandName, { color: colors.foreground }]}>Synkrave</Text>
           </Pressable>
-          <View style={[styles.betaPill, { borderColor: colors.border }]}>
-            <View
-              style={[styles.liveDot, { backgroundColor: colors.primary }]}
-            />
-            <Text style={[styles.betaText, { color: colors.mutedForeground }]}>
-              BETA
-            </Text>
+          <View style={styles.headerActions}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Open help center"
+              onPress={() => setHelpVisible(true)}
+              style={({ pressed }) => [styles.helpButton, { borderColor: colors.border, opacity: pressed ? 0.72 : 1 }]}
+            >
+              <Feather name="help-circle" size={16} color={colors.mutedForeground} />
+            </Pressable>
+            <View style={[styles.betaPill, { borderColor: colors.border }]}>
+              <View style={[styles.liveDot, { backgroundColor: colors.primary }]} />
+              <Text style={[styles.betaText, { color: colors.mutedForeground }]}>BETA</Text>
+            </View>
           </View>
         </View>
 
         <View style={styles.hero}>
-          <Text style={[styles.eyebrow, { color: colors.primary }]}>
-            PROMPT TO PRODUCT
-          </Text>
+          <Text style={[styles.eyebrow, { color: colors.primary }]}>PROMPT TO PRODUCT</Text>
           <Text style={[styles.title, { color: colors.foreground }]}>
             Turn ideas{"\n"}
             <Text style={{ color: colors.primary }}>into apps.</Text>
           </Text>
           <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-            Describe what you want to build. We&apos;ll shape the first version
-            for you.
+            Describe what you want to build. We&apos;ll shape the first version for you.
           </Text>
         </View>
 
@@ -1029,11 +1122,7 @@ export default function HomeScreen() {
               styles.composer,
               {
                 backgroundColor: colors.card,
-                borderColor: error
-                  ? colors.destructive
-                  : isFocused
-                    ? colors.primary
-                    : colors.border,
+                borderColor: error ? colors.destructive : isFocused ? colors.primary : colors.border,
               },
             ]}
           >
@@ -1054,173 +1143,79 @@ export default function HomeScreen() {
               style={[styles.promptInput, { color: colors.foreground }]}
             />
             <View style={styles.composerFooter}>
-              <Text
-                style={[
-                  styles.characterCount,
-                  { color: colors.mutedForeground },
-                ]}
-              >
-                {prompt.length}/500
-              </Text>
+              <Text style={[styles.characterCount, { color: colors.mutedForeground }]}>{prompt.length}/500</Text>
               <Pressable
                 testID="voice-button"
                 accessibilityRole="button"
-                accessibilityLabel={
-                  isListening ? "Stop voice input" : "Start voice input"
-                }
+                accessibilityLabel={isListening ? "Stop voice input" : "Start voice input"}
                 onPress={handleVoicePress}
                 style={({ pressed }) => [
                   styles.micButton,
-                  {
-                    backgroundColor: isListening
-                      ? colors.primary
-                      : colors.secondary,
-                    opacity: pressed ? 0.72 : 1,
-                  },
+                  { backgroundColor: isListening ? colors.primary : colors.secondary, opacity: pressed ? 0.72 : 1 },
                 ]}
               >
-                <Feather
-                  name={isListening ? "square" : "mic"}
-                  size={18}
-                  color={
-                    isListening ? colors.primaryForeground : colors.foreground
-                  }
-                />
+                <Feather name={isListening ? "square" : "mic"} size={18} color={isListening ? colors.primaryForeground : colors.foreground} />
               </Pressable>
             </View>
           </View>
 
           {isListening ? (
             <View style={styles.voiceStatus}>
-              <View
-                style={[styles.voicePulse, { backgroundColor: colors.primary }]}
-              />
-              <Text style={[styles.voiceStatusText, { color: colors.primary }]}>
-                Voice input ready
-              </Text>
-              <Text
-                style={[styles.voiceHint, { color: colors.mutedForeground }]}
-              >
-                Tap the mic to stop
-              </Text>
+              <View style={[styles.voicePulse, { backgroundColor: colors.primary }]} />
+              <Text style={[styles.voiceStatusText, { color: colors.primary }]}>Voice input ready</Text>
+              <Text style={[styles.voiceHint, { color: colors.mutedForeground }]}>Tap the mic to stop</Text>
             </View>
           ) : null}
 
           <View style={styles.voiceToolsRow}>
-            <Text
-              style={[
-                styles.voiceToolsLabel,
-                { color: colors.mutedForeground },
-              ]}
+            <Text style={[styles.voiceToolsLabel, { color: colors.mutedForeground }]}>VOICE</Text>
+            <Pressable
+              testID="language-picker-button"
+              accessibilityRole="button"
+              accessibilityLabel="Choose voice language from 100+ options"
+              onPress={() => setLanguagePickerVisible(true)}
+              style={[styles.languageTrigger, { backgroundColor: colors.muted, borderColor: colors.border }]}
             >
-              VOICE
-            </Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.voiceLanguageScroll}
-            >
-              {voiceLanguages.map((language) => (
-                <Pressable
-                  key={language.value}
-                  onPress={() => setVoiceLanguage(language.value)}
-                  style={[
-                    styles.voiceLanguageChip,
-                    {
-                      backgroundColor:
-                        voiceLanguage === language.value
-                          ? colors.primary
-                          : colors.muted,
-                      borderColor:
-                        voiceLanguage === language.value
-                          ? colors.primary
-                          : colors.border,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.voiceLanguageText,
-                      {
-                        color:
-                          voiceLanguage === language.value
-                            ? colors.primaryForeground
-                            : colors.secondaryForeground,
-                      },
-                    ]}
-                  >
-                    {language.label}
-                  </Text>
-                </Pressable>
-              ))}
-            </ScrollView>
+              <Feather name="globe" size={13} color={colors.primary} />
+              <Text numberOfLines={1} style={[styles.languageTriggerText, { color: colors.secondaryForeground }]}>
+                {activeLanguageLabel}
+              </Text>
+              <Feather name="chevron-down" size={13} color={colors.mutedForeground} />
+            </Pressable>
             <Pressable
               testID="scan-clone-button"
               accessibilityRole="button"
               accessibilityLabel="Scan and clone screenshot"
               onPress={handleScanClone}
-              style={({ pressed }) => [
-                styles.scanButton,
-                { backgroundColor: colors.accent, opacity: pressed ? 0.72 : 1 },
-              ]}
+              style={({ pressed }) => [styles.scanButton, { backgroundColor: colors.accent, opacity: pressed ? 0.72 : 1 }]}
             >
               <Feather name="camera" size={15} color={colors.primary} />
             </Pressable>
           </View>
           {scanImageUri ? (
-            <View
-              style={[styles.scanStatus, { backgroundColor: colors.accent }]}
-            >
+            <View style={[styles.scanStatus, { backgroundColor: colors.accent }]}>
               <Feather name="check-circle" size={14} color={colors.primary} />
-              <Text
-                style={[
-                  styles.scanStatusText,
-                  { color: colors.accentForeground },
-                ]}
-              >
+              <Text style={[styles.scanStatusText, { color: colors.accentForeground }]}>
                 Screenshot scanned — clone brief ready
               </Text>
             </View>
           ) : null}
 
-          {error ? (
-            <Text style={[styles.errorText, { color: colors.destructive }]}>
-              {error}
-            </Text>
-          ) : null}
+          {error ? <Text style={[styles.errorText, { color: colors.destructive }]}>{error}</Text> : null}
 
           <View style={styles.starterRow}>
-            <Text
-              style={[styles.starterLabel, { color: colors.mutedForeground }]}
-            >
-              TRY
-            </Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.starterScroll}
-            >
+            <Text style={[styles.starterLabel, { color: colors.mutedForeground }]}>TRY</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.starterScroll}>
               {starterPrompts.map((starter) => (
                 <Pressable
                   key={starter}
                   onPress={() => handleStarterPress(starter)}
                   style={({ pressed }) => [
                     styles.starterChip,
-                    {
-                      borderColor: colors.border,
-                      backgroundColor: colors.muted,
-                      opacity: pressed ? 0.68 : 1,
-                    },
+                    { borderColor: colors.border, backgroundColor: colors.muted, opacity: pressed ? 0.68 : 1 },
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.starterText,
-                      { color: colors.secondaryForeground },
-                    ]}
-                  >
-                    {starter}
-                  </Text>
+                  <Text style={[styles.starterText, { color: colors.secondaryForeground }]}>{starter}</Text>
                 </Pressable>
               ))}
             </ScrollView>
@@ -1235,29 +1230,15 @@ export default function HomeScreen() {
           disabled={isGenerating}
           style={({ pressed }) => [
             styles.generateButton,
-            {
-              backgroundColor: colors.primary,
-              opacity: pressed || isGenerating ? 0.78 : 1,
-            },
+            { backgroundColor: colors.primary, opacity: pressed || isGenerating ? 0.78 : 1 },
           ]}
         >
           {isGenerating ? (
             <ActivityIndicator color={colors.primaryForeground} />
           ) : (
             <>
-              <Text
-                style={[
-                  styles.generateText,
-                  { color: colors.primaryForeground },
-                ]}
-              >
-                Generate App
-              </Text>
-              <Feather
-                name="arrow-up-right"
-                size={20}
-                color={colors.primaryForeground}
-              />
+              <Text style={[styles.generateText, { color: colors.primaryForeground }]}>Generate App</Text>
+              <Feather name="arrow-up-right" size={20} color={colors.primaryForeground} />
             </>
           )}
         </Pressable>
@@ -1265,29 +1246,11 @@ export default function HomeScreen() {
         <View style={styles.templatesSection}>
           <View style={styles.templatesHeader}>
             <View>
-              <Text
-                style={[
-                  styles.outputEyebrow,
-                  { color: colors.mutedForeground },
-                ]}
-              >
-                STARTER LIBRARY
-              </Text>
-              <Text
-                style={[styles.templatesTitle, { color: colors.foreground }]}
-              >
-                Choose a template
-              </Text>
+              <Text style={[styles.outputEyebrow, { color: colors.mutedForeground }]}>STARTER LIBRARY</Text>
+              <Text style={[styles.templatesTitle, { color: colors.foreground }]}>Choose a template</Text>
             </View>
-            <View
-              style={[styles.templateCount, { backgroundColor: colors.muted }]}
-            >
-              <Text
-                style={[
-                  styles.templateCountText,
-                  { color: colors.mutedForeground },
-                ]}
-              >
+            <View style={[styles.templateCount, { backgroundColor: colors.muted }]}>
+              <Text style={[styles.templateCountText, { color: colors.mutedForeground }]}>
                 {isAuthenticated ? "12 unlocked" : "3 free · 9 locked"}
               </Text>
             </View>
@@ -1300,106 +1263,117 @@ export default function HomeScreen() {
                   key={template.id}
                   testID={`template-${template.id}`}
                   accessibilityRole="button"
-                  accessibilityLabel={
-                    isLocked
-                      ? `Unlock ${template.title}`
-                      : `Use ${template.title}`
-                  }
+                  accessibilityLabel={isLocked ? `Unlock ${template.title}` : `Use ${template.title}`}
                   onPress={() => handleTemplatePress(template)}
                   style={({ pressed }) => [
                     styles.templateCard,
-                    {
-                      backgroundColor: colors.card,
-                      borderColor: isLocked ? colors.border : colors.accent,
-                      opacity: pressed ? 0.72 : 1,
-                    },
+                    { backgroundColor: colors.card, borderColor: isLocked ? colors.border : colors.accent, opacity: pressed ? 0.72 : 1 },
                   ]}
                 >
                   <View style={styles.templateCardTop}>
-                    <View
-                      style={[
-                        styles.templateIcon,
-                        {
-                          backgroundColor: isLocked
-                            ? colors.muted
-                            : colors.accent,
-                        },
-                      ]}
-                    >
-                      <Feather
-                        name={template.icon}
-                        size={16}
-                        color={
-                          isLocked ? colors.mutedForeground : colors.primary
-                        }
-                      />
+                    <View style={[styles.templateIcon, { backgroundColor: isLocked ? colors.muted : colors.accent }]}>
+                      <Feather name={template.icon} size={16} color={isLocked ? colors.mutedForeground : colors.primary} />
                     </View>
                     {isLocked ? (
-                      <Feather
-                        name="lock"
-                        size={14}
-                        color={colors.mutedForeground}
-                      />
+                      <Feather name="lock" size={14} color={colors.mutedForeground} />
                     ) : (
-                      <Text
-                        style={[styles.freeLabel, { color: colors.primary }]}
-                      >
-                        {template.locked ? "PRO" : "FREE"}
-                      </Text>
+                      <Text style={[styles.freeLabel, { color: colors.primary }]}>{template.locked ? "PRO" : "FREE"}</Text>
                     )}
                   </View>
-                  <Text
-                    style={[styles.templateName, { color: colors.foreground }]}
-                  >
-                    {template.title}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.templateDescription,
-                      { color: colors.mutedForeground },
-                    ]}
-                  >
-                    {template.description}
-                  </Text>
+                  <Text style={[styles.templateName, { color: colors.foreground }]}>{template.title}</Text>
+                  <Text style={[styles.templateDescription, { color: colors.mutedForeground }]}>{template.description}</Text>
                 </Pressable>
               );
             })}
           </View>
           {actionStatus ? (
-            <View
-              style={[styles.actionStatus, { backgroundColor: colors.accent }]}
-            >
+            <View style={[styles.actionStatus, { backgroundColor: colors.accent }]}>
               <Feather name="info" size={14} color={colors.primary} />
-              <Text
-                style={[
-                  styles.actionStatusText,
-                  { color: colors.accentForeground },
-                ]}
-              >
-                {actionStatus}
-              </Text>
+              <Text style={[styles.actionStatusText, { color: colors.accentForeground }]}>{actionStatus}</Text>
             </View>
           ) : null}
         </View>
 
+        {/* ENTERPRISE OPERATIONS WORKSPACE */}
+        <View style={styles.templatesSection}>
+          <View style={styles.templatesHeader}>
+            <View>
+              <Text style={[styles.outputEyebrow, { color: colors.mutedForeground }]}>ENTERPRISE OPERATIONS</Text>
+              <Text style={[styles.templatesTitle, { color: colors.foreground }]}>Automation modules</Text>
+            </View>
+          </View>
+          <Text style={[styles.tierHint, { color: colors.mutedForeground }]}>
+            Demo tier switch (no billing wired up yet) — tap to preview lock behavior:
+          </Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tierRow}>
+            {TIER_NAMES.map((tierName, index) => (
+              <Pressable
+                key={tierName}
+                onPress={() => setCurrentTier(index)}
+                style={[
+                  styles.tierChip,
+                  {
+                    backgroundColor: currentTier === index ? colors.primary : colors.muted,
+                    borderColor: currentTier === index ? colors.primary : colors.border,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.tierChipText,
+                    { color: currentTier === index ? colors.primaryForeground : colors.secondaryForeground },
+                  ]}
+                >
+                  {tierName}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+          <View style={styles.templateGrid}>
+            {enterpriseModules.map((moduleItem) => {
+              const locked = currentTier < moduleItem.requiredTier;
+              return (
+                <Pressable
+                  key={moduleItem.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={locked ? `Locked: ${moduleItem.title}` : `Deploy ${moduleItem.title}`}
+                  onPress={() => handleModulePress(moduleItem)}
+                  style={({ pressed }) => [
+                    styles.templateCard,
+                    { backgroundColor: colors.card, borderColor: locked ? colors.border : colors.accent, opacity: pressed ? 0.72 : 1 },
+                  ]}
+                >
+                  <View style={styles.templateCardTop}>
+                    <View style={[styles.templateIcon, { backgroundColor: locked ? colors.muted : colors.accent }]}>
+                      <Feather name={moduleItem.icon} size={16} color={locked ? colors.mutedForeground : colors.primary} />
+                    </View>
+                    {locked ? (
+                      <Feather name="lock" size={14} color={colors.mutedForeground} />
+                    ) : (
+                      <Text style={[styles.freeLabel, { color: colors.primary }]}>READY</Text>
+                    )}
+                  </View>
+                  <Text style={[styles.templateName, { color: colors.foreground }]}>{moduleItem.title}</Text>
+                  <Text style={[styles.templateDescription, { color: colors.mutedForeground }]}>{moduleItem.description}</Text>
+                  <Text style={[styles.tierRequirement, { color: colors.mutedForeground }]}>
+                    Requires {TIER_NAMES[moduleItem.requiredTier]}+
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
         <View style={styles.outputHeader}>
           <View>
-            <Text
-              style={[styles.outputEyebrow, { color: colors.mutedForeground }]}
-            >
-              WORKSPACE
-            </Text>
-            <Text style={[styles.outputTitle, { color: colors.foreground }]}>
-              Generated output
-            </Text>
+            <Text style={[styles.outputEyebrow, { color: colors.mutedForeground }]}>WORKSPACE</Text>
+            <Text style={[styles.outputTitle, { color: colors.foreground }]}>Generated output</Text>
           </View>
           <View style={styles.outputActions}>
             <Pressable
               testID="live-preview-toggle"
               accessibilityRole="button"
-              accessibilityLabel={
-                isLivePreview ? "Show generated code" : "View live app"
-              }
+              accessibilityLabel={isLivePreview ? "Show generated code" : "View live app"}
               disabled={!generatedCode}
               onPress={() => {
                 setIsLivePreview((current) => !current);
@@ -1408,52 +1382,20 @@ export default function HomeScreen() {
               style={({ pressed }) => [
                 styles.previewToggle,
                 {
-                  backgroundColor: isLivePreview
-                    ? colors.primary
-                    : colors.muted,
+                  backgroundColor: isLivePreview ? colors.primary : colors.muted,
                   borderColor: isLivePreview ? colors.primary : colors.border,
                   opacity: !generatedCode ? 0.45 : pressed ? 0.7 : 1,
                 },
               ]}
             >
-              <Feather
-                name={isLivePreview ? "code" : "play"}
-                size={13}
-                color={
-                  isLivePreview
-                    ? colors.primaryForeground
-                    : colors.secondaryForeground
-                }
-              />
-              <Text
-                style={[
-                  styles.previewToggleText,
-                  {
-                    color: isLivePreview
-                      ? colors.primaryForeground
-                      : colors.secondaryForeground,
-                  },
-                ]}
-              >
+              <Feather name={isLivePreview ? "code" : "play"} size={13} color={isLivePreview ? colors.primaryForeground : colors.secondaryForeground} />
+              <Text style={[styles.previewToggleText, { color: isLivePreview ? colors.primaryForeground : colors.secondaryForeground }]}>
                 {isLivePreview ? "Show code" : "View live app"}
               </Text>
             </Pressable>
-            <View
-              style={[styles.outputBadge, { backgroundColor: colors.muted }]}
-            >
-              <Feather
-                name={generatedCode ? "check-circle" : "code"}
-                size={14}
-                color={generatedCode ? colors.primary : colors.mutedForeground}
-              />
-              <Text
-                style={[
-                  styles.outputBadgeText,
-                  { color: colors.mutedForeground },
-                ]}
-              >
-                {generatedCode ? "READY" : "EMPTY"}
-              </Text>
+            <View style={[styles.outputBadge, { backgroundColor: colors.muted }]}>
+              <Feather name={generatedCode ? "check-circle" : "code"} size={14} color={generatedCode ? colors.primary : colors.mutedForeground} />
+              <Text style={[styles.outputBadgeText, { color: colors.mutedForeground }]}>{generatedCode ? "READY" : "EMPTY"}</Text>
             </View>
           </View>
         </View>
@@ -1462,17 +1404,8 @@ export default function HomeScreen() {
           <View style={styles.testerCopy}>
             <Feather name="check-circle" size={15} color={colors.primary} />
             <View>
-              <Text style={[styles.testerTitle, { color: colors.foreground }]}>
-                AI One-Click Tester
-              </Text>
-              <Text
-                style={[
-                  styles.testerDescription,
-                  { color: colors.mutedForeground },
-                ]}
-              >
-                Test buttons inside the live simulator
-              </Text>
+              <Text style={[styles.testerTitle, { color: colors.foreground }]}>AI One-Click Tester</Text>
+              <Text style={[styles.testerDescription, { color: colors.mutedForeground }]}>Test buttons inside the live simulator</Text>
             </View>
           </View>
           <Pressable
@@ -1480,33 +1413,14 @@ export default function HomeScreen() {
             accessibilityRole="button"
             accessibilityLabel="Run AI One-Click Tester"
             onPress={handleTester}
-            style={({ pressed }) => [
-              styles.testerButton,
-              { backgroundColor: colors.primary, opacity: pressed ? 0.72 : 1 },
-            ]}
+            style={({ pressed }) => [styles.testerButton, { backgroundColor: colors.primary, opacity: pressed ? 0.72 : 1 }]}
           >
-            <Feather
-              name={isTesterRunning ? "loader" : "play"}
-              size={14}
-              color={colors.primaryForeground}
-            />
-            <Text
-              style={[
-                styles.testerButtonText,
-                { color: colors.primaryForeground },
-              ]}
-            >
-              {isTesterRunning ? "Testing" : "Run test"}
-            </Text>
+            <Feather name={isTesterRunning ? "loader" : "play"} size={14} color={colors.primaryForeground} />
+            <Text style={[styles.testerButtonText, { color: colors.primaryForeground }]}>{isTesterRunning ? "Testing" : "Run test"}</Text>
           </Pressable>
         </View>
 
-        <View
-          style={[
-            styles.outputCard,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}
-        >
+        <View style={[styles.outputCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {generatedCode ? (
             isLivePreview ? (
               <View style={styles.previewFrame}>
@@ -1515,11 +1429,7 @@ export default function HomeScreen() {
                     title: "Generated live app preview",
                     srcDoc: generatedCode,
                     sandbox: "allow-scripts",
-                    style: {
-                      border: "0",
-                      height: 360,
-                      width: "100%",
-                    },
+                    style: { border: "0", height: 360, width: "100%" },
                   })
                 ) : (
                   <WebView
@@ -1533,34 +1443,17 @@ export default function HomeScreen() {
                 )}
               </View>
             ) : (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.codeContent}
-              >
-                <Text
-                  style={[
-                    styles.codeText,
-                    { color: colors.secondaryForeground },
-                  ]}
-                >
-                  {generatedCode}
-                </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.codeContent}>
+                <Text style={[styles.codeText, { color: colors.secondaryForeground }]}>{generatedCode}</Text>
               </ScrollView>
             )
           ) : (
             <View style={styles.emptyOutput}>
-              <View
-                style={[styles.outputIcon, { backgroundColor: colors.accent }]}
-              >
+              <View style={[styles.outputIcon, { backgroundColor: colors.accent }]}>
                 <Feather name="layers" size={20} color={colors.primary} />
               </View>
-              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-                Your app will appear here
-              </Text>
-              <Text
-                style={[styles.emptyText, { color: colors.mutedForeground }]}
-              >
+              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Your app will appear here</Text>
+              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
                 Start with a prompt above to generate your first screen.
               </Text>
             </View>
@@ -1570,19 +1463,8 @@ export default function HomeScreen() {
         {generatedCode ? (
           <View style={styles.fileOutputSection}>
             <View style={styles.fileOutputHeader}>
-              <Text
-                style={[styles.fileOutputTitle, { color: colors.foreground }]}
-              >
-                Multi-file output
-              </Text>
-              <Text
-                style={[
-                  styles.fileOutputHint,
-                  { color: colors.mutedForeground },
-                ]}
-              >
-                3 files ready
-              </Text>
+              <Text style={[styles.fileOutputTitle, { color: colors.foreground }]}>Multi-file output</Text>
+              <Text style={[styles.fileOutputHint, { color: colors.mutedForeground }]}>3 files ready</Text>
             </View>
             <View style={styles.fileChipRow}>
               {[
@@ -1590,32 +1472,11 @@ export default function HomeScreen() {
                 ["styles.css", generatedFiles.css.length, "layers"],
                 ["script.js", generatedFiles.js.length, "code"],
               ].map(([name, size, icon]) => (
-                <View
-                  key={name}
-                  style={[styles.fileChip, { backgroundColor: colors.muted }]}
-                >
-                  <Feather
-                    name={icon as keyof typeof Feather.glyphMap}
-                    size={14}
-                    color={colors.primary}
-                  />
+                <View key={name} style={[styles.fileChip, { backgroundColor: colors.muted }]}>
+                  <Feather name={icon as keyof typeof Feather.glyphMap} size={14} color={colors.primary} />
                   <View style={styles.fileChipCopy}>
-                    <Text
-                      style={[
-                        styles.fileChipName,
-                        { color: colors.foreground },
-                      ]}
-                    >
-                      {name}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.fileChipSize,
-                        { color: colors.mutedForeground },
-                      ]}
-                    >
-                      {size} chars
-                    </Text>
+                    <Text style={[styles.fileChipName, { color: colors.foreground }]}>{name}</Text>
+                    <Text style={[styles.fileChipSize, { color: colors.mutedForeground }]}>{size} chars</Text>
                   </View>
                 </View>
               ))}
@@ -1631,90 +1492,36 @@ export default function HomeScreen() {
             onPress={handleDownload}
             style={({ pressed }) => [
               styles.secondaryAction,
-              {
-                borderColor: colors.border,
-                backgroundColor: colors.secondary,
-                opacity: pressed ? 0.72 : 1,
-              },
+              { borderColor: colors.border, backgroundColor: colors.secondary, opacity: pressed ? 0.72 : 1 },
             ]}
           >
-            <Feather
-              name="download"
-              size={16}
-              color={colors.secondaryForeground}
-            />
-            <Text
-              style={[
-                styles.secondaryActionText,
-                { color: colors.secondaryForeground },
-              ]}
-            >
-              Download index.html
-            </Text>
+            <Feather name="download" size={16} color={colors.secondaryForeground} />
+            <Text style={[styles.secondaryActionText, { color: colors.secondaryForeground }]}>Download index.html</Text>
           </Pressable>
           <Pressable
             testID="deploy-button"
             accessibilityRole="button"
             accessibilityLabel="Deploy to Internet"
             onPress={handleDeploy}
-            style={({ pressed }) => [
-              styles.primaryAction,
-              {
-                backgroundColor: colors.primary,
-                opacity: pressed ? 0.72 : 1,
-              },
-            ]}
+            style={({ pressed }) => [styles.primaryAction, { backgroundColor: colors.primary, opacity: pressed ? 0.72 : 1 }]}
           >
-            <Feather
-              name="upload-cloud"
-              size={16}
-              color={colors.primaryForeground}
-            />
-            <Text
-              style={[
-                styles.primaryActionText,
-                { color: colors.primaryForeground },
-              ]}
-            >
-              Deploy to Internet
-            </Text>
+            <Feather name="upload-cloud" size={16} color={colors.primaryForeground} />
+            <Text style={[styles.primaryActionText, { color: colors.primaryForeground }]}>Deploy (demo)</Text>
           </Pressable>
         </View>
 
         {livePreviewUrl ? (
-          <View
-            style={[styles.liveLinkCard, { backgroundColor: colors.accent }]}
-          >
+          <View style={[styles.liveLinkCard, { backgroundColor: colors.accent }]}>
             <View style={styles.liveLinkHeader}>
               <View style={styles.liveLinkTitleRow}>
                 <Feather name="globe" size={15} color={colors.primary} />
-                <Text
-                  style={[styles.liveLinkTitle, { color: colors.foreground }]}
-                >
-                  Live preview URL
-                </Text>
+                <Text style={[styles.liveLinkTitle, { color: colors.foreground }]}>Live preview URL</Text>
               </View>
-              <View
-                style={[
-                  styles.liveLinkBadge,
-                  { backgroundColor: colors.primary },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.liveLinkBadgeText,
-                    { color: colors.primaryForeground },
-                  ]}
-                >
-                  READY
-                </Text>
+              <View style={[styles.liveLinkBadge, { backgroundColor: colors.primary }]}>
+                <Text style={[styles.liveLinkBadgeText, { color: colors.primaryForeground }]}>READY</Text>
               </View>
             </View>
-            <Text
-              selectable
-              numberOfLines={2}
-              style={[styles.liveLinkUrl, { color: colors.mutedForeground }]}
-            >
+            <Text selectable numberOfLines={2} style={[styles.liveLinkUrl, { color: colors.mutedForeground }]}>
               {livePreviewUrl}
             </Text>
             <Pressable
@@ -1722,46 +1529,19 @@ export default function HomeScreen() {
               accessibilityRole="link"
               accessibilityLabel="Open standalone live preview"
               onPress={openLivePreview}
-              style={({ pressed }) => [
-                styles.openPreviewButton,
-                {
-                  backgroundColor: colors.secondary,
-                  opacity: pressed ? 0.72 : 1,
-                },
-              ]}
+              style={({ pressed }) => [styles.openPreviewButton, { backgroundColor: colors.secondary, opacity: pressed ? 0.72 : 1 }]}
             >
               <Feather name="external-link" size={15} color={colors.primary} />
-              <Text
-                style={[
-                  styles.openPreviewText,
-                  { color: colors.secondaryForeground },
-                ]}
-              >
-                Open standalone preview
-              </Text>
+              <Text style={[styles.openPreviewText, { color: colors.secondaryForeground }]}>Open standalone preview</Text>
             </Pressable>
           </View>
         ) : null}
 
-        <View
-          style={[
-            styles.chatCard,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}
-        >
+        <View style={[styles.chatCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.chatHeader}>
             <View>
-              <Text
-                style={[
-                  styles.outputEyebrow,
-                  { color: colors.mutedForeground },
-                ]}
-              >
-                FOLLOW-UP WORKSPACE
-              </Text>
-              <Text style={[styles.chatTitle, { color: colors.foreground }]}>
-                AI Chat &amp; Follow-up
-              </Text>
+              <Text style={[styles.outputEyebrow, { color: colors.mutedForeground }]}>FOLLOW-UP WORKSPACE</Text>
+              <Text style={[styles.chatTitle, { color: colors.foreground }]}>AI Chat &amp; Follow-up</Text>
             </View>
             <Feather name="message-square" size={18} color={colors.primary} />
           </View>
@@ -1773,14 +1553,7 @@ export default function HomeScreen() {
             placeholder="Ask for a change, such as: make the hero warmer..."
             placeholderTextColor={colors.mutedForeground}
             textAlignVertical="top"
-            style={[
-              styles.chatInput,
-              {
-                backgroundColor: colors.background,
-                borderColor: colors.border,
-                color: colors.foreground,
-              },
-            ]}
+            style={[styles.chatInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
           />
           <View style={styles.chatActions}>
             <Pressable
@@ -1788,38 +1561,19 @@ export default function HomeScreen() {
               accessibilityRole="button"
               accessibilityLabel="Speak a follow-up modification"
               onPress={handleChatVoicePress}
-              style={({ pressed }) => [
-                styles.chatIconButton,
-                {
-                  backgroundColor: colors.secondary,
-                  opacity: pressed ? 0.72 : 1,
-                },
-              ]}
+              style={({ pressed }) => [styles.chatIconButton, { backgroundColor: colors.secondary, opacity: pressed ? 0.72 : 1 }]}
             >
-              <Feather
-                name={
-                  isListening && listeningTarget === "chat" ? "square" : "mic"
-                }
-                size={16}
-                color={colors.secondaryForeground}
-              />
+              <Feather name={isListening && listeningTarget === "chat" ? "square" : "mic"} size={16} color={colors.secondaryForeground} />
             </Pressable>
             <Pressable
               testID="bug-fix-button"
               accessibilityRole="button"
               accessibilityLabel="Run AI Bug Fixer"
               onPress={handleBugFix}
-              style={({ pressed }) => [
-                styles.bugFixButton,
-                { backgroundColor: colors.accent, opacity: pressed ? 0.72 : 1 },
-              ]}
+              style={({ pressed }) => [styles.bugFixButton, { backgroundColor: colors.accent, opacity: pressed ? 0.72 : 1 }]}
             >
               <Feather name="tool" size={15} color={colors.primary} />
-              <Text
-                style={[styles.bugFixText, { color: colors.accentForeground }]}
-              >
-                AI Bug Fixer
-              </Text>
+              <Text style={[styles.bugFixText, { color: colors.accentForeground }]}>AI Bug Fixer</Text>
             </Pressable>
             <Pressable
               testID="chat-submit-button"
@@ -1827,26 +1581,9 @@ export default function HomeScreen() {
               accessibilityLabel="Apply follow-up"
               disabled={isChatSending}
               onPress={handleChatSubmit}
-              style={({ pressed }) => [
-                styles.chatSubmitButton,
-                {
-                  backgroundColor: colors.primary,
-                  opacity: isChatSending || pressed ? 0.72 : 1,
-                },
-              ]}
+              style={({ pressed }) => [styles.chatSubmitButton, { backgroundColor: colors.primary, opacity: isChatSending || pressed ? 0.72 : 1 }]}
             >
-              {isChatSending ? (
-                <ActivityIndicator
-                  size="small"
-                  color={colors.primaryForeground}
-                />
-              ) : (
-                <Feather
-                  name="arrow-up"
-                  size={17}
-                  color={colors.primaryForeground}
-                />
-              )}
+              {isChatSending ? <ActivityIndicator size="small" color={colors.primaryForeground} /> : <Feather name="arrow-up" size={17} color={colors.primaryForeground} />}
             </Pressable>
           </View>
         </View>
@@ -1858,69 +1595,127 @@ export default function HomeScreen() {
           onPress={handleExportGithub}
           style={({ pressed }) => [
             styles.githubButton,
-            {
-              borderColor: colors.border,
-              backgroundColor: colors.secondary,
-              opacity: pressed ? 0.72 : 1,
-            },
+            { borderColor: colors.border, backgroundColor: colors.secondary, opacity: pressed ? 0.72 : 1 },
           ]}
         >
           <Feather name="github" size={17} color={colors.secondaryForeground} />
-          <Text
-            style={[
-              styles.githubButtonText,
-              { color: colors.secondaryForeground },
-            ]}
-          >
-            Export to GitHub
-          </Text>
+          <Text style={[styles.githubButtonText, { color: colors.secondaryForeground }]}>Export to GitHub</Text>
         </Pressable>
+
+        {/* FOOTER: brand domain, support contact, backend status, honest "secured" badge */}
+        <View style={[styles.brandFooter, { borderColor: colors.border }]}>
+          <Pressable onPress={() => Linking.openURL(BRAND_DOMAIN)} style={styles.footerRow}>
+            <Feather name="link" size={13} color={colors.primary} />
+            <Text style={[styles.footerLinkText, { color: colors.primary }]}>{BRAND_DOMAIN.replace("https://", "")}</Text>
+          </Pressable>
+          <Pressable onPress={handleContactSupport} style={styles.footerRow}>
+            <Feather name="mail" size={13} color={colors.mutedForeground} />
+            <Text style={[styles.footerText, { color: colors.mutedForeground }]}>{SUPPORT_EMAIL_PRIMARY}</Text>
+          </Pressable>
+          <View style={styles.footerRow}>
+            <Feather name="lock" size={12} color={colors.mutedForeground} />
+            <Text style={[styles.footerText, { color: colors.mutedForeground }]}>Secured connection (HTTPS)</Text>
+          </View>
+          <View style={styles.footerRow}>
+            <Feather name={isBackendConnected ? "database" : "database"} size={12} color={isBackendConnected ? colors.primary : colors.mutedForeground} />
+            <Text style={[styles.footerText, { color: isBackendConnected ? colors.primary : colors.mutedForeground }]}>
+              Backend: {isBackendConnected ? "Connected" : "Not connected — add Supabase keys"}
+            </Text>
+          </View>
+        </View>
 
         <View style={styles.footer}>
           <Feather name="zap" size={14} color={colors.mutedForeground} />
-          <Text style={[styles.footerText, { color: colors.mutedForeground }]}>
-            Built for quick ideas and clean starts
-          </Text>
+          <Text style={[styles.footerText, { color: colors.mutedForeground }]}>Built for quick ideas and clean starts</Text>
         </View>
       </ScrollView>
 
-      <Modal
-        visible={authModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={closeAuthModal}
-      >
-        <KeyboardAvoidingView behavior="padding" style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.modalCard,
-              { backgroundColor: colors.card, borderColor: colors.border },
-            ]}
-          >
+      {/* LANGUAGE PICKER MODAL */}
+      <Modal visible={languagePickerVisible} transparent animationType="fade" onRequestClose={() => setLanguagePickerVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.languageModalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.modalHeader}>
-              <View>
-                <Text style={[styles.modalEyebrow, { color: colors.primary }]}>
-                  FREE ACCOUNT
-                </Text>
-                <Text style={[styles.modalTitle, { color: colors.foreground }]}>
-                  Unlock appforge
-                </Text>
-              </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Close login"
-                onPress={closeAuthModal}
-                style={styles.iconButton}
-              >
+              <Text style={[styles.modalTitle, { color: colors.foreground, fontSize: 18 }]}>Choose a language</Text>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close language picker" onPress={() => setLanguagePickerVisible(false)} style={styles.iconButton}>
                 <Feather name="x" size={20} color={colors.mutedForeground} />
               </Pressable>
             </View>
-            <Text
-              style={[
-                styles.modalDescription,
-                { color: colors.mutedForeground },
-              ]}
-            >
+            <TextInput
+              value={languageSearch}
+              onChangeText={setLanguageSearch}
+              placeholder="Search 100+ languages..."
+              placeholderTextColor={colors.mutedForeground}
+              style={[styles.modalInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground, marginTop: 6 }]}
+            />
+            <FlatList
+              data={filteredLanguages}
+              keyExtractor={(item) => item.value}
+              style={{ marginTop: 10, maxHeight: 360 }}
+              renderItem={({ item }) => (
+                <Pressable
+                  onPress={() => {
+                    setVoiceLanguage(item.value);
+                    setLanguagePickerVisible(false);
+                    setLanguageSearch("");
+                    Haptics.selectionAsync();
+                  }}
+                  style={[styles.languageRow, { borderBottomColor: colors.border }]}
+                >
+                  <Text style={{ color: colors.foreground, fontSize: 14 }}>{item.label}</Text>
+                  {item.value === voiceLanguage ? <Feather name="check" size={16} color={colors.primary} /> : null}
+                </Pressable>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      {/* HELP CENTER MODAL */}
+      <Modal visible={helpVisible} transparent animationType="slide" onRequestClose={() => setHelpVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.adminPanelCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={[styles.modalEyebrow, { color: colors.primary }]}>DOCUMENTATION</Text>
+                <Text style={[styles.modalTitle, { color: colors.foreground }]}>Help Center</Text>
+              </View>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close help center" onPress={() => setHelpVisible(false)} style={styles.iconButton}>
+                <Feather name="x" size={20} color={colors.mutedForeground} />
+              </Pressable>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.adminPanelContent}>
+              {helpArticles.map((article) => (
+                <View key={article.title} style={{ marginBottom: 18 }}>
+                  <Text style={{ color: colors.foreground, fontFamily: "Inter_600SemiBold", fontSize: 14, marginBottom: 6 }}>
+                    {article.title}
+                  </Text>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 12, lineHeight: 18 }}>{article.body}</Text>
+                </View>
+              ))}
+              <Pressable
+                onPress={handleContactSupport}
+                style={({ pressed }) => [styles.modalPrimaryButton, { backgroundColor: colors.primary, opacity: pressed ? 0.72 : 1, marginTop: 6 }]}
+              >
+                <Text style={[styles.modalPrimaryText, { color: colors.primaryForeground }]}>Still stuck? Email support</Text>
+              </Pressable>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={authModalVisible} transparent animationType="fade" onRequestClose={closeAuthModal}>
+        <KeyboardAvoidingView behavior="padding" style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={[styles.modalEyebrow, { color: colors.primary }]}>FREE ACCOUNT</Text>
+                <Text style={[styles.modalTitle, { color: colors.foreground }]}>Unlock Synkrave</Text>
+              </View>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close login" onPress={closeAuthModal} style={styles.iconButton}>
+                <Feather name="x" size={20} color={colors.mutedForeground} />
+              </Pressable>
+            </View>
+            <Text style={[styles.modalDescription, { color: colors.mutedForeground }]}>
               {authReason}. Sign in for free to unlock all professional tools.
             </Text>
             <TextInput
@@ -1934,14 +1729,7 @@ export default function HomeScreen() {
               }}
               placeholder="Email address"
               placeholderTextColor={colors.mutedForeground}
-              style={[
-                styles.modalInput,
-                {
-                  backgroundColor: colors.background,
-                  borderColor: colors.border,
-                  color: colors.foreground,
-                },
-              ]}
+              style={[styles.modalInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
               value={authEmail}
             />
             <TextInput
@@ -1955,138 +1743,54 @@ export default function HomeScreen() {
               placeholder="Password"
               placeholderTextColor={colors.mutedForeground}
               secureTextEntry
-              style={[
-                styles.modalInput,
-                {
-                  backgroundColor: colors.background,
-                  borderColor: colors.border,
-                  color: colors.foreground,
-                },
-              ]}
+              style={[styles.modalInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
               value={authPassword}
             />
-            {authError ? (
-              <Text style={[styles.modalError, { color: colors.destructive }]}>
-                {authError}
-              </Text>
-            ) : null}
+            {authError ? <Text style={[styles.modalError, { color: colors.destructive }]}>{authError}</Text> : null}
             <Pressable
               testID="email-login-button"
               accessibilityRole="button"
               accessibilityLabel="Continue with email"
               onPress={handleOfflineLogin}
-              style={({ pressed }) => [
-                styles.modalPrimaryButton,
-                {
-                  backgroundColor: colors.primary,
-                  opacity: pressed ? 0.72 : 1,
-                },
-              ]}
+              style={({ pressed }) => [styles.modalPrimaryButton, { backgroundColor: colors.primary, opacity: pressed ? 0.72 : 1 }]}
             >
-              <Text
-                style={[
-                  styles.modalPrimaryText,
-                  { color: colors.primaryForeground },
-                ]}
-              >
-                Continue with email
-              </Text>
+              <Text style={[styles.modalPrimaryText, { color: colors.primaryForeground }]}>Continue with email</Text>
             </Pressable>
             <View style={styles.modalDivider}>
-              <View
-                style={[
-                  styles.modalDividerLine,
-                  { backgroundColor: colors.border },
-                ]}
-              />
-              <Text
-                style={[
-                  styles.modalDividerText,
-                  { color: colors.mutedForeground },
-                ]}
-              >
-                OR
-              </Text>
-              <View
-                style={[
-                  styles.modalDividerLine,
-                  { backgroundColor: colors.border },
-                ]}
-              />
+              <View style={[styles.modalDividerLine, { backgroundColor: colors.border }]} />
+              <Text style={[styles.modalDividerText, { color: colors.mutedForeground }]}>OR</Text>
+              <View style={[styles.modalDividerLine, { backgroundColor: colors.border }]} />
             </View>
             <Pressable
               testID="google-login-button"
               accessibilityRole="button"
               accessibilityLabel="Continue with Google"
               onPress={handleGoogleLogin}
-              style={({ pressed }) => [
-                styles.googleButton,
-                {
-                  backgroundColor: colors.secondary,
-                  borderColor: colors.border,
-                  opacity: pressed ? 0.72 : 1,
-                },
-              ]}
+              style={({ pressed }) => [styles.googleButton, { backgroundColor: colors.secondary, borderColor: colors.border, opacity: pressed ? 0.72 : 1 }]}
             >
-              <Text style={[styles.googleMark, { color: colors.primary }]}>
-                G
-              </Text>
-              <Text
-                style={[
-                  styles.googleButtonText,
-                  { color: colors.secondaryForeground },
-                ]}
-              >
-                Continue with Google
-              </Text>
+              <Text style={[styles.googleMark, { color: colors.primary }]}>G</Text>
+              <Text style={[styles.googleButtonText, { color: colors.secondaryForeground }]}>Continue with Google</Text>
             </Pressable>
-            <Text
-              style={[styles.privacyNote, { color: colors.mutedForeground }]}
-            >
-              Offline demo account. No credentials leave this device.
-            </Text>
+            <Text style={[styles.privacyNote, { color: colors.mutedForeground }]}>Offline demo account. No credentials leave this device.</Text>
           </View>
         </KeyboardAvoidingView>
       </Modal>
 
-      <Modal
-        visible={adminPasswordModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setAdminPasswordModalVisible(false)}
-      >
+      <Modal visible={adminPasswordModalVisible} transparent animationType="fade" onRequestClose={() => setAdminPasswordModalVisible(false)}>
         <KeyboardAvoidingView behavior="padding" style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.modalCard,
-              { backgroundColor: colors.card, borderColor: colors.border },
-            ]}
-          >
+          <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.modalHeader}>
               <View>
-                <Text style={[styles.modalEyebrow, { color: colors.primary }]}>
-                  RESTRICTED
-                </Text>
-                <Text style={[styles.modalTitle, { color: colors.foreground }]}>
-                  Admin access
-                </Text>
+                <Text style={[styles.modalEyebrow, { color: colors.primary }]}>RESTRICTED (DEMO GATE)</Text>
+                <Text style={[styles.modalTitle, { color: colors.foreground }]}>Admin access</Text>
               </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Close admin access"
-                onPress={() => setAdminPasswordModalVisible(false)}
-                style={styles.iconButton}
-              >
+              <Pressable accessibilityRole="button" accessibilityLabel="Close admin access" onPress={() => setAdminPasswordModalVisible(false)} style={styles.iconButton}>
                 <Feather name="x" size={20} color={colors.mutedForeground} />
               </Pressable>
             </View>
-            <Text
-              style={[
-                styles.modalDescription,
-                { color: colors.mutedForeground },
-              ]}
-            >
-              This local panel is hidden behind a password for demo testing.
+            <Text style={[styles.modalDescription, { color: colors.mutedForeground }]}>
+              This panel is gated by a password stored inside the app bundle. That is not real security — anyone
+              who inspects the app code can read it. Treat this as a UI placeholder only.
             </Text>
             <TextInput
               testID="admin-password"
@@ -2098,242 +1802,86 @@ export default function HomeScreen() {
               placeholder="Admin password"
               placeholderTextColor={colors.mutedForeground}
               secureTextEntry
-              style={[
-                styles.modalInput,
-                {
-                  backgroundColor: colors.background,
-                  borderColor: colors.border,
-                  color: colors.foreground,
-                },
-              ]}
+              style={[styles.modalInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
               value={adminPassword}
             />
-            {adminError ? (
-              <Text style={[styles.modalError, { color: colors.destructive }]}>
-                {adminError}
-              </Text>
-            ) : null}
+            {adminError ? <Text style={[styles.modalError, { color: colors.destructive }]}>{adminError}</Text> : null}
             <Pressable
               testID="admin-unlock-button"
               accessibilityRole="button"
               accessibilityLabel="Unlock admin panel"
               onPress={handleAdminUnlock}
-              style={({ pressed }) => [
-                styles.modalPrimaryButton,
-                {
-                  backgroundColor: colors.primary,
-                  opacity: pressed ? 0.72 : 1,
-                },
-              ]}
+              style={({ pressed }) => [styles.modalPrimaryButton, { backgroundColor: colors.primary, opacity: pressed ? 0.72 : 1 }]}
             >
-              <Text
-                style={[
-                  styles.modalPrimaryText,
-                  { color: colors.primaryForeground },
-                ]}
-              >
-                Open admin panel
-              </Text>
+              <Text style={[styles.modalPrimaryText, { color: colors.primaryForeground }]}>Open admin panel</Text>
             </Pressable>
-            <Text
-              style={[styles.privacyNote, { color: colors.mutedForeground }]}
-            >
-              Local-only demo gate. Use a server-side secret before production.
+            <Text style={[styles.privacyNote, { color: colors.mutedForeground }]}>
+              Local-only demo gate. Use a real server-side authenticated session before production.
             </Text>
           </View>
         </KeyboardAvoidingView>
       </Modal>
 
-      <Modal
-        visible={adminPanelVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setAdminPanelVisible(false)}
-      >
+      <Modal visible={adminPanelVisible} transparent animationType="slide" onRequestClose={() => setAdminPanelVisible(false)}>
         <View style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.adminPanelCard,
-              { backgroundColor: colors.card, borderColor: colors.border },
-            ]}
-          >
+          <View style={[styles.adminPanelCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.modalHeader}>
               <View>
-                <Text style={[styles.modalEyebrow, { color: colors.primary }]}>
-                  ADMIN PANEL
-                </Text>
-                <Text style={[styles.modalTitle, { color: colors.foreground }]}>
-                  Operations overview
-                </Text>
+                <Text style={[styles.modalEyebrow, { color: colors.primary }]}>ADMIN PANEL</Text>
+                <Text style={[styles.modalTitle, { color: colors.foreground }]}>Operations overview</Text>
               </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Close admin panel"
-                onPress={() => setAdminPanelVisible(false)}
-                style={styles.iconButton}
-              >
+              <Pressable accessibilityRole="button" accessibilityLabel="Close admin panel" onPress={() => setAdminPanelVisible(false)} style={styles.iconButton}>
                 <Feather name="x" size={20} color={colors.mutedForeground} />
               </Pressable>
             </View>
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.adminPanelContent}
-            >
-              <Text
-                style={[styles.sectionLabel, { color: colors.mutedForeground }]}
-              >
-                MOCK TRAFFIC ANALYTICS
-              </Text>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.adminPanelContent}>
+              <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>MOCK TRAFFIC ANALYTICS</Text>
               <View style={styles.analyticsGrid}>
-                <View
-                  style={[
-                    styles.analyticsCard,
-                    { backgroundColor: colors.background },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.analyticsValue,
-                      { color: colors.foreground },
-                    ]}
-                  >
-                    12.8k
-                  </Text>
-                  <Text
-                    style={[
-                      styles.analyticsLabel,
-                      { color: colors.mutedForeground },
-                    ]}
-                  >
-                    Visitors
-                  </Text>
+                <View style={[styles.analyticsCard, { backgroundColor: colors.background }]}>
+                  <Text style={[styles.analyticsValue, { color: colors.foreground }]}>12.8k</Text>
+                  <Text style={[styles.analyticsLabel, { color: colors.mutedForeground }]}>Visitors</Text>
                 </View>
-                <View
-                  style={[
-                    styles.analyticsCard,
-                    { backgroundColor: colors.background },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.analyticsValue,
-                      { color: colors.foreground },
-                    ]}
-                  >
-                    4.2k
-                  </Text>
-                  <Text
-                    style={[
-                      styles.analyticsLabel,
-                      { color: colors.mutedForeground },
-                    ]}
-                  >
-                    Apps generated
-                  </Text>
+                <View style={[styles.analyticsCard, { backgroundColor: colors.background }]}>
+                  <Text style={[styles.analyticsValue, { color: colors.foreground }]}>4.2k</Text>
+                  <Text style={[styles.analyticsLabel, { color: colors.mutedForeground }]}>Apps generated</Text>
                 </View>
-                <View
-                  style={[
-                    styles.analyticsCard,
-                    { backgroundColor: colors.background },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.analyticsValue,
-                      { color: colors.foreground },
-                    ]}
-                  >
-                    68%
-                  </Text>
-                  <Text
-                    style={[
-                      styles.analyticsLabel,
-                      { color: colors.mutedForeground },
-                    ]}
-                  >
-                    Return rate
-                  </Text>
+                <View style={[styles.analyticsCard, { backgroundColor: colors.background }]}>
+                  <Text style={[styles.analyticsValue, { color: colors.foreground }]}>68%</Text>
+                  <Text style={[styles.analyticsLabel, { color: colors.mutedForeground }]}>Return rate</Text>
                 </View>
-                <View
-                  style={[
-                    styles.analyticsCard,
-                    { backgroundColor: colors.background },
-                  ]}
-                >
-                  <Text
-                    style={[styles.analyticsValue, { color: colors.primary }]}
-                  >
-                    +24%
-                  </Text>
-                  <Text
-                    style={[
-                      styles.analyticsLabel,
-                      { color: colors.mutedForeground },
-                    ]}
-                  >
-                    Weekly growth
-                  </Text>
+                <View style={[styles.analyticsCard, { backgroundColor: colors.background }]}>
+                  <Text style={[styles.analyticsValue, { color: colors.primary }]}>+24%</Text>
+                  <Text style={[styles.analyticsLabel, { color: colors.mutedForeground }]}>Weekly growth</Text>
                 </View>
               </View>
-              <View
-                style={[
-                  styles.chartCard,
-                  { backgroundColor: colors.background },
-                ]}
-              >
+              <View style={[styles.chartCard, { backgroundColor: colors.background }]}>
                 <View style={styles.chartHeader}>
-                  <Text
-                    style={[styles.chartTitle, { color: colors.foreground }]}
-                  >
-                    Weekly traffic
-                  </Text>
-                  <Text style={[styles.chartPeriod, { color: colors.primary }]}>
-                    7 days
-                  </Text>
+                  <Text style={[styles.chartTitle, { color: colors.foreground }]}>Weekly traffic</Text>
+                  <Text style={[styles.chartPeriod, { color: colors.primary }]}>7 days</Text>
                 </View>
                 <View style={styles.chartBars}>
                   {[42, 58, 46, 74, 62, 88, 96].map((height, index) => (
                     <View key={index} style={styles.chartBarColumn}>
-                      <View
-                        style={[
-                          styles.chartBar,
-                          {
-                            backgroundColor: colors.primary,
-                            height: height * 1.25,
-                          },
-                        ]}
-                      />
-                      <Text
-                        style={[
-                          styles.chartDay,
-                          { color: colors.mutedForeground },
-                        ]}
-                      >
-                        {["M", "T", "W", "T", "F", "S", "S"][index]}
-                      </Text>
+                      <View style={[styles.chartBar, { backgroundColor: colors.primary, height: height * 1.25 }]} />
+                      <Text style={[styles.chartDay, { color: colors.mutedForeground }]}>{["M", "T", "W", "T", "F", "S", "S"][index]}</Text>
                     </View>
                   ))}
                 </View>
               </View>
-              <Text
-                style={[styles.sectionLabel, { color: colors.mutedForeground }]}
-              >
-                SHARIAH AD-MOB CONTROLS
-              </Text>
-              <View
-                style={[
-                  styles.controlsCard,
-                  { backgroundColor: colors.background },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.controlsDescription,
-                    { color: colors.mutedForeground },
-                  ]}
-                >
-                  Block sensitive ad categories completely offline before an ad
-                  slot is shown.
+              <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>BACKEND STATUS</Text>
+              <View style={[styles.controlsCard, { backgroundColor: colors.background }]}>
+                <Text style={[styles.controlsDescription, { color: colors.mutedForeground }]}>
+                  Supabase: {BACKEND_CONFIG.supabaseUrl ? "URL set" : "Not configured"} · Firebase project:{" "}
+                  {BACKEND_CONFIG.firebaseProjectId || "Not configured"}. Add real credentials via environment
+                  variables to move off demo mode.
+                </Text>
+              </View>
+              <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>SHARIAH-COMPLIANT AD CONTROLS</Text>
+              <View style={[styles.controlsCard, { backgroundColor: colors.background }]}>
+                <Text style={[styles.controlsDescription, { color: colors.mutedForeground }]}>
+                  Blocks sensitive ad categories in this app's own UI before an ad slot is shown. This does not
+                  control what a third-party ad network itself decides to serve — enforce category blocking in
+                  your AdMob dashboard as the authoritative source of truth.
                 </Text>
                 {[
                   ["interest", "Interest", "Block interest-based promotions"],
@@ -2342,60 +1890,23 @@ export default function HomeScreen() {
                 ].map(([key, title, description]) => (
                   <View key={key} style={styles.controlRow}>
                     <View style={styles.controlCopy}>
-                      <Text
-                        style={[
-                          styles.controlTitle,
-                          { color: colors.foreground },
-                        ]}
-                      >
-                        {title}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.controlDescription,
-                          { color: colors.mutedForeground },
-                        ]}
-                      >
-                        {description}
-                      </Text>
+                      <Text style={[styles.controlTitle, { color: colors.foreground }]}>{title}</Text>
+                      <Text style={[styles.controlDescription, { color: colors.mutedForeground }]}>{description}</Text>
                     </View>
                     <Switch
                       accessibilityLabel={`Block ${title}`}
-                      onValueChange={(value) =>
-                        setAdControls((current) => ({
-                          ...current,
-                          [key]: value,
-                        }))
-                      }
-                      thumbColor={
-                        adControls[key]
-                          ? colors.primaryForeground
-                          : colors.mutedForeground
-                      }
-                      trackColor={{
-                        false: colors.secondary,
-                        true: colors.primary,
-                      }}
+                      onValueChange={(value) => setAdControls((current) => ({ ...current, [key]: value }))}
+                      thumbColor={adControls[key] ? colors.primaryForeground : colors.mutedForeground}
+                      trackColor={{ false: colors.secondary, true: colors.primary }}
                       value={adControls[key]}
                     />
                   </View>
                 ))}
               </View>
-              <View
-                style={[
-                  styles.protectionStatus,
-                  { backgroundColor: colors.accent },
-                ]}
-              >
+              <View style={[styles.protectionStatus, { backgroundColor: colors.accent }]}>
                 <Feather name="shield" size={15} color={colors.primary} />
-                <Text
-                  style={[
-                    styles.protectionStatusText,
-                    { color: colors.accentForeground },
-                  ]}
-                >
-                  {Object.values(adControls).filter(Boolean).length}/3
-                  categories blocked
+                <Text style={[styles.protectionStatusText, { color: colors.accentForeground }]}>
+                  {Object.values(adControls).filter(Boolean).length}/3 categories blocked
                 </Text>
               </View>
             </ScrollView>
@@ -2407,874 +1918,120 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: {
+  screen: { flex: 1 },
+  content: { paddingHorizontal: 20 },
+  header: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
+  brandRow: { alignItems: "center", flexDirection: "row", gap: 10 },
+  brandMark: { alignItems: "center", borderRadius: 10, height: 34, justifyContent: "center", width: 34 },
+  brandName: { fontFamily: "Inter_700Bold", fontSize: 17, letterSpacing: -0.4 },
+  headerActions: { alignItems: "center", flexDirection: "row", gap: 8 },
+  helpButton: { alignItems: "center", borderRadius: 99, borderWidth: 1, height: 30, justifyContent: "center", width: 30 },
+  betaPill: { alignItems: "center", borderRadius: 99, borderWidth: 1, flexDirection: "row", gap: 6, paddingHorizontal: 9, paddingVertical: 5 },
+  liveDot: { borderRadius: 99, height: 5, width: 5 },
+  betaText: { fontFamily: "Inter_700Bold", fontSize: 10, letterSpacing: 1 },
+  hero: { marginTop: 66 },
+  eyebrow: { fontFamily: "Inter_700Bold", fontSize: 11, letterSpacing: 1.8 },
+  title: { fontFamily: "Inter_700Bold", fontSize: 42, letterSpacing: -2, lineHeight: 46, marginTop: 12 },
+  subtitle: { fontFamily: "Inter_400Regular", fontSize: 15, lineHeight: 23, marginTop: 16, maxWidth: 325 },
+  composerSection: { marginTop: 32 },
+  composer: { borderRadius: 18, borderWidth: 1, minHeight: 174, padding: 16 },
+  promptInput: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 17, lineHeight: 25, minHeight: 100 },
+  composerFooter: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", marginTop: 8 },
+  characterCount: { fontFamily: "Inter_400Regular", fontSize: 11 },
+  micButton: { alignItems: "center", borderRadius: 12, height: 38, justifyContent: "center", width: 38 },
+  voiceStatus: { alignItems: "center", flexDirection: "row", gap: 7, marginTop: 11 },
+  voicePulse: { borderRadius: 99, height: 6, width: 6 },
+  voiceStatusText: { fontFamily: "Inter_600SemiBold", fontSize: 12 },
+  voiceHint: { fontFamily: "Inter_400Regular", fontSize: 12 },
+  voiceToolsRow: { alignItems: "center", flexDirection: "row", gap: 7, marginTop: 14 },
+  voiceToolsLabel: { fontFamily: "Inter_700Bold", fontSize: 10, letterSpacing: 1.1 },
+  languageTrigger: {
+    alignItems: "center",
+    borderRadius: 99,
+    borderWidth: 1,
+    flexDirection: "row",
     flex: 1,
-  },
-  content: {
-    paddingHorizontal: 20,
-  },
-  header: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  brandRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 10,
-  },
-  brandMark: {
-    alignItems: "center",
-    borderRadius: 10,
-    height: 34,
-    justifyContent: "center",
-    width: 34,
-  },
-  brandName: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 17,
-    letterSpacing: -0.4,
-  },
-  betaPill: {
-    alignItems: "center",
-    borderRadius: 99,
-    borderWidth: 1,
-    flexDirection: "row",
     gap: 6,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-  },
-  liveDot: {
-    borderRadius: 99,
-    height: 5,
-    width: 5,
-  },
-  betaText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 10,
-    letterSpacing: 1,
-  },
-  hero: {
-    marginTop: 66,
-  },
-  eyebrow: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 11,
-    letterSpacing: 1.8,
-  },
-  title: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 42,
-    letterSpacing: -2,
-    lineHeight: 46,
-    marginTop: 12,
-  },
-  subtitle: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 15,
-    lineHeight: 23,
-    marginTop: 16,
-    maxWidth: 325,
-  },
-  composerSection: {
-    marginTop: 32,
-  },
-  composer: {
-    borderRadius: 18,
-    borderWidth: 1,
-    minHeight: 174,
-    padding: 16,
-  },
-  promptInput: {
-    flex: 1,
-    fontFamily: "Inter_400Regular",
-    fontSize: 17,
-    lineHeight: 25,
-    minHeight: 100,
-  },
-  composerFooter: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 8,
-  },
-  characterCount: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 11,
-  },
-  micButton: {
-    alignItems: "center",
-    borderRadius: 12,
-    height: 38,
-    justifyContent: "center",
-    width: 38,
-  },
-  voiceStatus: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 7,
-    marginTop: 11,
-  },
-  voicePulse: {
-    borderRadius: 99,
-    height: 6,
-    width: 6,
-  },
-  voiceStatusText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 12,
-  },
-  voiceHint: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-  },
-  voiceToolsRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 7,
-    marginTop: 14,
-  },
-  voiceToolsLabel: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 10,
-    letterSpacing: 1.1,
-  },
-  voiceLanguageScroll: {
-    flexGrow: 1,
-    gap: 6,
-  },
-  voiceLanguageChip: {
-    borderRadius: 99,
-    borderWidth: 1,
-    paddingHorizontal: 9,
-    paddingVertical: 6,
-  },
-  voiceLanguageText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 10,
-  },
-  scanButton: {
-    alignItems: "center",
-    borderRadius: 10,
-    height: 32,
-    justifyContent: "center",
-    width: 34,
-  },
-  scanStatus: {
-    alignItems: "center",
-    borderRadius: 10,
-    flexDirection: "row",
-    gap: 7,
-    marginTop: 9,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  scanStatusText: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 11,
-  },
-  errorText: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 12,
-    marginTop: 10,
-  },
-  starterRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    marginTop: 16,
-  },
-  starterLabel: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 10,
-    letterSpacing: 1.2,
-    marginRight: 10,
-  },
-  starterScroll: {
-    gap: 8,
-  },
-  starterChip: {
-    borderRadius: 99,
-    borderWidth: 1,
-    paddingHorizontal: 11,
-    paddingVertical: 8,
-  },
-  starterText: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 11,
-  },
-  generateButton: {
-    alignItems: "center",
-    borderRadius: 15,
-    flexDirection: "row",
-    height: 58,
-    justifyContent: "center",
-    marginTop: 27,
-    gap: 9,
-  },
-  generateText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 16,
-  },
-  templatesSection: {
-    marginTop: 36,
-  },
-  templatesHeader: {
-    alignItems: "flex-end",
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  templatesTitle: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 20,
-    letterSpacing: -0.5,
-    marginTop: 5,
-  },
-  templateCount: {
-    borderRadius: 99,
     paddingHorizontal: 10,
     paddingVertical: 7,
   },
-  templateCountText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 10,
-  },
-  templateGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-    marginTop: 14,
-  },
-  templateCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    minHeight: 142,
-    padding: 13,
-    width: "48%",
-  },
-  templateCardTop: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  templateIcon: {
-    alignItems: "center",
-    borderRadius: 10,
-    height: 34,
-    justifyContent: "center",
-    width: 34,
-  },
-  freeLabel: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 9,
-    letterSpacing: 0.7,
-  },
-  templateName: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
-    marginTop: 15,
-  },
-  templateDescription: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 11,
-    lineHeight: 16,
-    marginTop: 5,
-  },
-  actionStatus: {
-    alignItems: "center",
-    borderRadius: 12,
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  actionStatusText: {
-    flex: 1,
-    fontFamily: "Inter_500Medium",
-    fontSize: 11,
-    lineHeight: 16,
-  },
-  outputHeader: {
-    alignItems: "flex-end",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 42,
-  },
-  outputActions: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 7,
-  },
-  outputEyebrow: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 10,
-    letterSpacing: 1.6,
-  },
-  outputTitle: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 20,
-    letterSpacing: -0.5,
-    marginTop: 5,
-  },
-  outputBadge: {
-    alignItems: "center",
-    borderRadius: 99,
-    flexDirection: "row",
-    gap: 5,
-    paddingHorizontal: 9,
-    paddingVertical: 6,
-  },
-  outputBadgeText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 10,
-    letterSpacing: 0.8,
-  },
-  previewToggle: {
-    alignItems: "center",
-    borderRadius: 99,
-    borderWidth: 1,
-    flexDirection: "row",
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-  },
-  previewToggleText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 10,
-  },
-  outputCard: {
-    borderRadius: 18,
-    borderWidth: 1,
-    marginTop: 14,
-    minHeight: 190,
-    overflow: "hidden",
-  },
-  previewFrame: {
-    minHeight: 340,
-    overflow: "hidden",
-  },
-  testerBar: {
-    alignItems: "center",
-    borderRadius: 14,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  testerCopy: {
-    alignItems: "center",
-    flex: 1,
-    flexDirection: "row",
-    gap: 9,
-  },
-  testerTitle: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 12,
-  },
-  testerDescription: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 10,
-    marginTop: 2,
-  },
-  testerButton: {
-    alignItems: "center",
-    borderRadius: 10,
-    flexDirection: "row",
-    gap: 6,
-    minHeight: 34,
-    paddingHorizontal: 10,
-  },
-  testerButtonText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 10,
-  },
-  webView: {
-    backgroundColor: "#0B1119",
-    height: 360,
-    width: "100%",
-  },
-  emptyOutput: {
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 190,
-    paddingHorizontal: 30,
-  },
-  outputIcon: {
-    alignItems: "center",
-    borderRadius: 13,
-    height: 44,
-    justifyContent: "center",
-    width: 44,
-  },
-  emptyTitle: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 15,
-    marginTop: 13,
-  },
-  emptyText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    lineHeight: 20,
-    marginTop: 6,
-    textAlign: "center",
-  },
-  codeContent: {
-    padding: 18,
-  },
-  codeText: {
-    fontFamily: Platform.select({
-      ios: "Menlo",
-      android: "monospace",
-      default: "monospace",
-    }),
-    fontSize: 13,
-    lineHeight: 21,
-  },
-  fileOutputSection: {
-    marginTop: 14,
-  },
-  fileOutputHeader: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  fileOutputTitle: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
-  },
-  fileOutputHint: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 10,
-  },
-  fileChipRow: {
-    flexDirection: "row",
-    gap: 7,
-  },
-  fileChip: {
-    alignItems: "center",
-    borderRadius: 11,
-    flex: 1,
-    flexDirection: "row",
-    gap: 7,
-    minHeight: 48,
-    paddingHorizontal: 8,
-  },
-  fileChipCopy: {
-    flex: 1,
-  },
-  fileChipName: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 10,
-  },
-  fileChipSize: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 9,
-    marginTop: 3,
-  },
-  businessActions: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 12,
-  },
-  secondaryAction: {
-    alignItems: "center",
-    borderRadius: 13,
-    borderWidth: 1,
-    flex: 1,
-    flexDirection: "row",
-    gap: 7,
-    justifyContent: "center",
-    minHeight: 48,
-    paddingHorizontal: 10,
-  },
-  secondaryActionText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 11,
-  },
-  primaryAction: {
-    alignItems: "center",
-    borderRadius: 13,
-    flex: 1,
-    flexDirection: "row",
-    gap: 7,
-    justifyContent: "center",
-    minHeight: 48,
-    paddingHorizontal: 10,
-  },
-  primaryActionText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 11,
-  },
-  liveLinkCard: {
-    borderRadius: 14,
-    marginTop: 12,
-    padding: 14,
-  },
-  liveLinkHeader: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  liveLinkTitleRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 8,
-  },
-  liveLinkTitle: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
-  },
-  liveLinkBadge: {
-    borderRadius: 99,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-  },
-  liveLinkBadgeText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 9,
-    letterSpacing: 0.7,
-  },
-  liveLinkUrl: {
-    fontFamily: Platform.select({
-      ios: "Menlo",
-      android: "monospace",
-      default: "monospace",
-    }),
-    fontSize: 10,
-    lineHeight: 15,
-    marginTop: 11,
-  },
-  openPreviewButton: {
-    alignItems: "center",
-    borderRadius: 10,
-    flexDirection: "row",
-    gap: 7,
-    justifyContent: "center",
-    marginTop: 12,
-    minHeight: 40,
-  },
-  openPreviewText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 12,
-  },
-  chatCard: {
-    borderRadius: 18,
-    borderWidth: 1,
-    marginTop: 18,
-    padding: 14,
-  },
-  chatHeader: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  chatTitle: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 18,
-    letterSpacing: -0.4,
-    marginTop: 5,
-  },
-  chatInput: {
-    borderRadius: 12,
-    borderWidth: 1,
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    lineHeight: 19,
-    marginTop: 14,
-    minHeight: 72,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  chatActions: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 8,
-    justifyContent: "flex-end",
-    marginTop: 10,
-  },
-  chatIconButton: {
-    alignItems: "center",
-    borderRadius: 10,
-    height: 38,
-    justifyContent: "center",
-    width: 38,
-  },
-  bugFixButton: {
-    alignItems: "center",
-    borderRadius: 10,
-    flexDirection: "row",
-    gap: 6,
-    height: 38,
-    paddingHorizontal: 10,
-  },
-  bugFixText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 11,
-  },
-  chatSubmitButton: {
-    alignItems: "center",
-    borderRadius: 10,
-    height: 38,
-    justifyContent: "center",
-    width: 42,
-  },
-  githubButton: {
-    alignItems: "center",
-    borderRadius: 13,
-    borderWidth: 1,
-    flexDirection: "row",
-    gap: 8,
-    justifyContent: "center",
-    marginTop: 10,
-    minHeight: 48,
-  },
-  githubButtonText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
-  },
-  modalOverlay: {
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.72)",
-    flex: 1,
-    justifyContent: "center",
-    padding: 20,
-  },
-  modalCard: {
-    borderRadius: 22,
-    borderWidth: 1,
-    maxWidth: 440,
-    padding: 22,
-    width: "100%",
-  },
-  modalHeader: {
-    alignItems: "flex-start",
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  modalEyebrow: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 10,
-    letterSpacing: 1.5,
-  },
-  modalTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 24,
-    letterSpacing: -0.8,
-    marginTop: 6,
-  },
-  iconButton: {
-    alignItems: "center",
-    height: 34,
-    justifyContent: "center",
-    width: 34,
-  },
-  modalDescription: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    lineHeight: 20,
-    marginBottom: 18,
-    marginTop: 12,
-  },
-  modalInput: {
-    borderRadius: 12,
-    borderWidth: 1,
-    fontFamily: "Inter_400Regular",
-    fontSize: 15,
-    height: 50,
-    marginTop: 10,
-    paddingHorizontal: 14,
-  },
-  modalError: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 12,
-    marginTop: 8,
-  },
-  modalPrimaryButton: {
-    alignItems: "center",
-    borderRadius: 12,
-    height: 50,
-    justifyContent: "center",
-    marginTop: 16,
-  },
-  modalPrimaryText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 14,
-  },
-  modalDivider: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 10,
-    marginVertical: 17,
-  },
-  modalDividerLine: {
-    flex: 1,
-    height: 1,
-  },
-  modalDividerText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 10,
-    letterSpacing: 1,
-  },
-  googleButton: {
-    alignItems: "center",
-    borderRadius: 12,
-    borderWidth: 1,
-    flexDirection: "row",
-    gap: 10,
-    height: 50,
-    justifyContent: "center",
-  },
-  googleMark: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 17,
-  },
-  googleButtonText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
-  },
-  privacyNote: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 10,
-    lineHeight: 15,
-    marginTop: 16,
-    textAlign: "center",
-  },
-  adminPanelCard: {
-    borderRadius: 24,
-    borderWidth: 1,
-    flex: 1,
-    marginTop: 54,
-    maxWidth: 520,
-    overflow: "hidden",
-    width: "100%",
-  },
-  adminPanelContent: {
-    padding: 20,
-    paddingBottom: 34,
-  },
-  sectionLabel: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 10,
-    letterSpacing: 1.5,
-    marginBottom: 10,
-    marginTop: 22,
-  },
-  analyticsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  analyticsCard: {
-    borderRadius: 14,
-    minHeight: 86,
-    padding: 14,
-    width: "48%",
-  },
-  analyticsValue: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 22,
-    letterSpacing: -0.6,
-  },
-  analyticsLabel: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 11,
-    marginTop: 7,
-  },
-  chartCard: {
-    borderRadius: 14,
-    marginTop: 10,
-    padding: 16,
-  },
-  chartHeader: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  chartTitle: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
-  },
-  chartPeriod: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 11,
-  },
-  chartBars: {
-    alignItems: "flex-end",
-    flexDirection: "row",
-    height: 150,
-    justifyContent: "space-between",
-    marginTop: 18,
-  },
-  chartBarColumn: {
-    alignItems: "center",
-    justifyContent: "flex-end",
-  },
-  chartBar: {
-    borderRadius: 5,
-    minHeight: 8,
-    width: 18,
-  },
-  chartDay: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 10,
-    marginTop: 8,
-  },
-  controlsCard: {
-    borderRadius: 14,
-    padding: 16,
-  },
-  controlsDescription: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    lineHeight: 18,
-    marginBottom: 8,
-  },
-  controlRow: {
-    alignItems: "center",
-    borderTopColor: "#26313F",
-    borderTopWidth: 1,
-    flexDirection: "row",
-    gap: 12,
-    justifyContent: "space-between",
-    paddingVertical: 14,
-  },
-  controlCopy: {
-    flex: 1,
-  },
-  controlTitle: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
-  },
-  controlDescription: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 11,
-    lineHeight: 16,
-    marginTop: 4,
-  },
-  protectionStatus: {
-    alignItems: "center",
-    borderRadius: 12,
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  protectionStatusText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 11,
-  },
-  footer: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 7,
-    justifyContent: "center",
-    marginTop: 23,
-  },
-  footerText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 11,
-  },
-});
+  languageTriggerText: { flex: 1, fontFamily: "Inter_600SemiBold", fontSize: 11 },
+  scanButton: { alignItems: "center", borderRadius: 10, height: 32, justifyContent: "center", width: 34 },
+  scanStatus: { alignItems: "center", borderRadius: 10, flexDirection: "row", gap: 7, marginTop: 9, paddingHorizontal: 10, paddingVertical: 8 },
+  scanStatusText: { fontFamily: "Inter_500Medium", fontSize: 11 },
+  errorText: { fontFamily: "Inter_500Medium", fontSize: 12, marginTop: 10 },
+  starterRow: { alignItems: "center", flexDirection: "row", marginTop: 16 },
+  starterLabel: { fontFamily: "Inter_700Bold", fontSize: 10, letterSpacing: 1.2, marginRight: 10 },
+  starterScroll: { gap: 8 },
+  starterChip: { borderRadius: 99, borderWidth: 1, paddingHorizontal: 11, paddingVertical: 8 },
+  starterText: { fontFamily: "Inter_500Medium", fontSize: 11 },
+  generateButton: { alignItems: "center", borderRadius: 15, flexDirection: "row", height: 58, justifyContent: "center", marginTop: 27, gap: 9 },
+  generateText: { fontFamily: "Inter_700Bold", fontSize: 16 },
+  templatesSection: { marginTop: 36 },
+  templatesHeader: { alignItems: "flex-end", flexDirection: "row", justifyContent: "space-between" },
+  templatesTitle: { fontFamily: "Inter_600SemiBold", fontSize: 20, letterSpacing: -0.5, marginTop: 5 },
+  templateCount: { borderRadius: 99, paddingHorizontal: 10, paddingVertical: 7 },
+  templateCountText: { fontFamily: "Inter_600SemiBold", fontSize: 10 },
+  templateGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 14 },
+  templateCard: { borderRadius: 16, borderWidth: 1, minHeight: 142, padding: 13, width: "48%" },
+  templateCardTop: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
+  templateIcon: { alignItems: "center", borderRadius: 10, height: 34, justifyContent: "center", width: 34 },
+  freeLabel: { fontFamily: "Inter_700Bold", fontSize: 9, letterSpacing: 0.7 },
+  templateName: { fontFamily: "Inter_600SemiBold", fontSize: 13, marginTop: 15 },
+  templateDescription: { fontFamily: "Inter_400Regular", fontSize: 11, lineHeight: 16, marginTop: 5 },
+  tierRequirement: { fontFamily: "Inter_500Medium", fontSize: 9, marginTop: 8 },
+  tierHint: { fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 12 },
+  tierRow: { gap: 7, marginTop: 10 },
+  tierChip: { borderRadius: 99, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 7 },
+  tierChipText: { fontFamily: "Inter_600SemiBold", fontSize: 11 },
+  actionStatus: { alignItems: "center", borderRadius: 12, flexDirection: "row", gap: 8, marginTop: 12, paddingHorizontal: 12, paddingVertical: 10 },
+  actionStatusText: { flex: 1, fontFamily: "Inter_500Medium", fontSize: 11, lineHeight: 16 },
+  outputHeader: { alignItems: "flex-end", flexDirection: "row", justifyContent: "space-between", marginTop: 42 },
+  outputActions: { alignItems: "center", flexDirection: "row", gap: 7 },
+  outputEyebrow: { fontFamily: "Inter_700Bold", fontSize: 10, letterSpacing: 1.6 },
+  outputTitle: { fontFamily: "Inter_600SemiBold", fontSize: 20, letterSpacing: -0.5, marginTop: 5 },
+  outputBadge: { alignItems: "center", borderRadius: 99, flexDirection: "row", gap: 5, paddingHorizontal: 9, paddingVertical: 6 },
+  outputBadgeText: { fontFamily: "Inter_700Bold", fontSize: 10, letterSpacing: 0.8 },
+  previewToggle: { alignItems: "center", borderRadius: 99, borderWidth: 1, flexDirection: "row", gap: 5, paddingHorizontal: 10, paddingVertical: 7 },
+  previewToggleText: { fontFamily: "Inter_600SemiBold", fontSize: 10 },
+  outputCard: { borderRadius: 18, borderWidth: 1, marginTop: 14, minHeight: 190, overflow: "hidden" },
+  previewFrame: { minHeight: 340, overflow: "hidden" },
+  testerBar: { alignItems: "center", borderRadius: 14, flexDirection: "row", justifyContent: "space-between", marginTop: 12, paddingHorizontal: 12, paddingVertical: 10 },
+  testerCopy: { alignItems: "center", flex: 1, flexDirection: "row", gap: 9 },
+  testerTitle: { fontFamily: "Inter_600SemiBold", fontSize: 12 },
+  testerDescription: { fontFamily: "Inter_400Regular", fontSize: 10, marginTop: 2 },
+  testerButton: { alignItems: "center", borderRadius: 10, flexDirection: "row", gap: 6, minHeight: 34, paddingHorizontal: 10 },
+  testerButtonText: { fontFamily: "Inter_700Bold", fontSize: 10 },
+  webView: { backgroundColor: "#0B1119", height: 360, width: "100%" },
+  emptyOutput: { alignItems: "center", justifyContent: "center", minHeight: 190, paddingHorizontal: 30 },
+  outputIcon: { alignItems: "center", borderRadius: 13, height: 44, justifyContent: "center", width: 44 },
+  emptyTitle: { fontFamily: "Inter_600SemiBold", fontSize: 15, marginTop: 13 },
+  emptyText: { fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 20, marginTop: 6, textAlign: "center" },
+  codeContent: { padding: 18 },
+  codeText: { fontFamily: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }), fontSize: 13, lineHeight: 21 },
+  fileOutputSection: { marginTop: 14 },
+  fileOutputHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
+  fileOutputTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  fileOutputHint: { fontFamily: "Inter_500Medium", fontSize: 10 },
+  fileChipRow: { flexDirection: "row", gap: 7 },
+  fileChip: { alignItems: "center", borderRadius: 11, flex: 1, flexDirection: "row", gap: 7, minHeight: 48, paddingHorizontal: 8 },
+  fileChipCopy: { flex: 1 },
+  fileChipName: { fontFamily: "Inter_600SemiBold", fontSize: 10 },
+  fileChipSize: { fontFamily: "Inter_400Regular", fontSize: 9, marginTop: 3 },
+  businessActions: { flexDirection: "row", gap: 10, marginTop: 12 },
+  secondaryAction: { alignItems: "center", borderRadius: 13, borderWidth: 1, flex: 1, flexDirection: "row", gap: 7, justifyContent: "center", minHeight: 48, paddingHorizontal: 10 },
+  secondaryActionText: { fontFamily: "Inter_600SemiBold", fontSize: 11 },
+  primaryAction: { alignItems: "center", borderRadius: 13, flex: 1, flexDirection: "row", gap: 7, justifyContent: "center", minHeight: 48, paddingHorizontal: 10 },
+  primaryActionText: { fontFamily: "Inter_700Bold", fontSize: 11 },
+  liveLinkCard: { borderRadius: 14, marginTop: 12, padding: 14 },
+  liveLinkHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
+  liveLinkTitleRow: { alignItems: "center", flexDirection: "row", gap: 8 },
+  liveLinkTitle: { fontFamily: "Inter_600SemiBold", fontSize: 13 },
+  liveLinkBadge: { borderRadius: 99, paddingHorizontal: 8, paddingVertical: 5 },
+  liveLinkBadgeText: { fontFamily: "Inter_700Bold", fontSize: 9, letterSpacing: 0.7 },
+  liveLinkUrl: { fontFamily: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }), fontSize: 10, lineHeight: 15, marginTop: 11 },
+  openPreviewButton: { alignItems: "center", borderRadius: 10, flexDirection: "row", gap: 7, justifyContent: "center", marginTop: 12, minHeight: 40 },
+  openPreviewText: { fontFamily: "Inter_600SemiBold", fontSize: 12 },
+  chatCard: { borderRadius: 18, borderWidth: 1, marginTop: 18, padding: 14 },
+  chatHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
+  chatTitle: { fontFamily: "Inter_600SemiBold", fontSize: 18,
