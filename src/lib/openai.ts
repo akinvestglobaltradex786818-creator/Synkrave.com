@@ -1,3 +1,6 @@
+import { safeParseAIResponse } from "./safeParse";
+import { validateBlueprint } from "./validate";
+
 export async function generateWithAI(prompt: string) {
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -14,23 +17,17 @@ export async function generateWithAI(prompt: string) {
           content: `
 You are a strict system generator.
 
-Return ONLY valid JSON.
-
-Exact format:
+Return ONLY valid JSON:
 
 {
-  "app_name": "",
+  "app_name": string,
   "entities": [],
   "apis": [],
   "pages": [],
   "user_flows": []
 }
 
-Rules:
-- No text outside JSON
-- No markdown
-- No extra keys
-- If unsure return empty arrays
+No text. No markdown. No extra keys.
 `
         },
         {
@@ -41,35 +38,17 @@ Rules:
     })
   });
 
-  if (!response.ok) {
-    return {
-      error: "OpenAI API failed",
-      status: response.status
-    };
-  }
-
   const data = await response.json();
   const raw = data?.choices?.[0]?.message?.content || "";
 
-  try {
-    return JSON.parse(raw);
-  } catch {
-    const match = raw.match(/\{[\s\S]*\}/);
+  const parsed = safeParseAIResponse(raw);
 
-    if (match) {
-      try {
-        return JSON.parse(match[0]);
-      } catch {
-        return {
-          error: "Corrupted JSON",
-          raw
-        };
-      }
-    }
-
+  if (!parsed) {
     return {
       error: "Invalid AI response",
       raw
     };
   }
+
+  return validateBlueprint(parsed);
 }
