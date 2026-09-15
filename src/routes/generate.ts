@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { generateWithAI } from "../lib/openai";
 import { templates } from "../lib/template";
+import { normalizeResponse } from "../lib/normalize";
 
 const router = Router();
 
@@ -9,7 +10,6 @@ router.post("/generate", async (req, res) => {
 
   let finalPrompt = prompt;
 
-  // template handling
   if (type && Object.prototype.hasOwnProperty.call(templates, type)) {
     finalPrompt = templates[type as keyof typeof templates];
   }
@@ -25,7 +25,7 @@ router.post("/generate", async (req, res) => {
       return res.status(500).json(result);
     }
 
-    return res.json(result);
+    return res.json(normalizeResponse(result));
 
   } catch (err) {
     return res.status(500).json({
