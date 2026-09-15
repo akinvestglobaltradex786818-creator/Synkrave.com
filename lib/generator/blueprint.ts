@@ -23,8 +23,10 @@ export function generateBlueprint(prompt: string): Blueprint {
   const lower = prompt.toLowerCase();
 
   let entities: any[] = [];
+  let relationships: any[] = [];
+  let api_endpoints: any[] = [];
 
-  // 🔥 simple dynamic logic
+  // 🔴 ECOMMERCE
   if (lower.includes("ecommerce")) {
     entities = [
       createEntity("users", [
@@ -43,7 +45,10 @@ export function generateBlueprint(prompt: string): Blueprint {
         createField("total", "decimal"),
       ]),
     ];
-  } else if (lower.includes("blog")) {
+  }
+
+  // 🔴 BLOG
+  else if (lower.includes("blog")) {
     entities = [
       createEntity("users", [
         createField("id", "uuid"),
@@ -55,8 +60,10 @@ export function generateBlueprint(prompt: string): Blueprint {
         createField("content", "string"),
       ]),
     ];
-  } else {
-    // default generic
+  }
+
+  // 🔴 DEFAULT
+  else {
     entities = [
       createEntity("items", [
         createField("id", "uuid"),
@@ -65,13 +72,58 @@ export function generateBlueprint(prompt: string): Blueprint {
     ];
   }
 
+  // 🔴 AUTO API GENERATION
+  entities.forEach((entity) => {
+    const name = entity.name;
+
+    api_endpoints.push(
+      {
+        method: "GET",
+        route: `/${name}`,
+        description: `Get all ${name}`,
+      },
+      {
+        method: "POST",
+        route: `/${name}`,
+        description: `Create ${name}`,
+      },
+      {
+        method: "PUT",
+        route: `/${name}/:id`,
+        description: `Update ${name}`,
+      },
+      {
+        method: "DELETE",
+        route: `/${name}/:id`,
+        description: `Delete ${name}`,
+      }
+    );
+  });
+
+  // 🔴 SIMPLE RELATIONSHIPS (basic logic)
+  if (entities.find((e) => e.name === "orders")) {
+    relationships.push({
+      from: "users",
+      to: "orders",
+      type: "one-to-many",
+    });
+  }
+
+  if (entities.find((e) => e.name === "products")) {
+    relationships.push({
+      from: "orders",
+      to: "products",
+      type: "many-to-many",
+    });
+  }
+
   return {
     app_name: prompt,
-    description: `Generated app for: ${prompt}`,
-    assumptions: ["Auto-generated schema"],
+    description: `Generated blueprint for: ${prompt}`,
+    assumptions: ["Auto-generated system"],
     entities,
-    relationships: [],
-    api_endpoints: [],
+    relationships,
+    api_endpoints,
     user_flows: [],
   };
 }
