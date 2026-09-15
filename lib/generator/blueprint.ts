@@ -8,33 +8,70 @@ export type Blueprint = {
   user_flows: any[];
 };
 
+function createEntity(name: string, fields: any[]) {
+  return {
+    name,
+    fields,
+  };
+}
+
+function createField(name: string, type: string, required = true) {
+  return { name, type, required };
+}
+
 export function generateBlueprint(prompt: string): Blueprint {
-  if (prompt.toLowerCase().includes("ecommerce")) {
-    return {
-      app_name: "Ecommerce App",
-      description: "Basic ecommerce system",
-      assumptions: ["User can browse products"],
-      entities: [
-        {
-          name: "products",
-          fields: [
-            { name: "id", type: "uuid", required: true }
-          ]
-        }
-      ],
-      relationships: [],
-      api_endpoints: [],
-      user_flows: []
-    };
+  const lower = prompt.toLowerCase();
+
+  let entities: any[] = [];
+
+  // 🔥 simple dynamic logic
+  if (lower.includes("ecommerce")) {
+    entities = [
+      createEntity("users", [
+        createField("id", "uuid"),
+        createField("email", "string"),
+        createField("password", "string"),
+      ]),
+      createEntity("products", [
+        createField("id", "uuid"),
+        createField("name", "string"),
+        createField("price", "decimal"),
+      ]),
+      createEntity("orders", [
+        createField("id", "uuid"),
+        createField("user_id", "uuid"),
+        createField("total", "decimal"),
+      ]),
+    ];
+  } else if (lower.includes("blog")) {
+    entities = [
+      createEntity("users", [
+        createField("id", "uuid"),
+        createField("name", "string"),
+      ]),
+      createEntity("posts", [
+        createField("id", "uuid"),
+        createField("title", "string"),
+        createField("content", "string"),
+      ]),
+    ];
+  } else {
+    // default generic
+    entities = [
+      createEntity("items", [
+        createField("id", "uuid"),
+        createField("name", "string"),
+      ]),
+    ];
   }
 
   return {
-    app_name: "Generic App",
-    description: "Default blueprint",
-    assumptions: [],
-    entities: [],
+    app_name: prompt,
+    description: `Generated app for: ${prompt}`,
+    assumptions: ["Auto-generated schema"],
+    entities,
     relationships: [],
     api_endpoints: [],
-    user_flows: []
+    user_flows: [],
   };
 }
