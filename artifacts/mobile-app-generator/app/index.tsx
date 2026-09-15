@@ -1989,7 +1989,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   
-},languageTriggerText: { flex: 1, fontFamily: "Inter_600SemiBold", fontSize: 11 },
+languageTriggerText: { flex: 1, fontFamily: "Inter_600SemiBold", fontSize: 11 },
 scanButton: { alignItems: "center", borderRadius: 10, height: 32, justifyContent: "center", width: 34 },
 scanStatus: { alignItems: "center", borderRadius: 10, flexDirection: "row", gap: 7, marginTop: 9, paddingHorizontal: 10, paddingVertical: 8 },
 scanStatusText: { fontFamily: "Inter_500Medium", fontSize: 11 },
