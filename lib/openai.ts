@@ -11,30 +11,57 @@ export async function generateWithAI(prompt: string) {
         {
           role: "system",
           content: `
-You are a system architect AI.
+You are a strict system generator.
+
 Return ONLY valid JSON.
-No explanations, no text outside JSON.
+
+Must follow EXACT structure:
+
+{
+  "app_name": string,
+  "entities": array,
+  "apis": array,
+  "pages": array,
+  "user_flows": array
+}
+
+Rules:
+- No extra text
+- No markdown
+- No explanation
+- No extra keys
+- Always return valid JSON
+- If unsure, use empty arrays
 `
         },
         {
           role: "user",
           content: prompt
         }
-      ]
+      ],
+      temperature: 0.3
     })
   });
 
   const data = await response.json();
 
-  const raw = data.choices?.[0]?.message?.content || "";
+  const raw = data?.choices?.[0]?.message?.content || "";
 
+  // safe parsing
   try {
     return JSON.parse(raw);
   } catch (err) {
-    // fallback: extract JSON manually
     const match = raw.match(/\{[\s\S]*\}/);
+
     if (match) {
-      return JSON.parse(match[0]);
+      try {
+        return JSON.parse(match[0]);
+      } catch {
+        return {
+          error: "Corrupted JSON",
+          raw
+        };
+      }
     }
 
     return {
