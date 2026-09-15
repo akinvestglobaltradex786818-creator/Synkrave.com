@@ -1,5 +1,5 @@
+export const HOSTING_PROVIDER = "vercel";
+
 export const BACKEND_CONFIG = {
-  apiBaseUrl: "",
-  databaseUrl: "",
-  env: "dev",
+  databaseUrl: null,
 };
