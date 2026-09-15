@@ -12,13 +12,8 @@ export async function generateWithAI(prompt: string) {
           role: "system",
           content: `
 You are a system architect AI.
-Generate a structured JSON blueprint with:
-- app_name
-- entities
-- apis
-- pages
-- user_flows
-Return ONLY JSON.
+Return ONLY valid JSON.
+No explanations, no text outside JSON.
 `
         },
         {
@@ -31,5 +26,20 @@ Return ONLY JSON.
 
   const data = await response.json();
 
-  return JSON.parse(data.choices[0].message.content);
+  const raw = data.choices?.[0]?.message?.content || "";
+
+  try {
+    return JSON.parse(raw);
+  } catch (err) {
+    // fallback: extract JSON manually
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (match) {
+      return JSON.parse(match[0]);
+    }
+
+    return {
+      error: "Invalid AI response",
+      raw
+    };
+  }
 }
