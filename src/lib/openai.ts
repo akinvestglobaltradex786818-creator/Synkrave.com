@@ -1,53 +1,24 @@
-export async function generateWithAI(prompt: string) {
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: `
-You are a system architect AI.
-Return ONLY valid JSON with this structure:
+{
+  role: "system",
+  content: `
+You are a strict system generator.
+
+Return ONLY valid JSON.
+
+Rules:
+- No explanation
+- No markdown
+- No extra text
+- Output must match this structure exactly:
 
 {
   "app_name": string,
-  "entities": array,
-  "apis": array,
-  "pages": array,
-  "user_flows": array
+  "entities": [],
+  "apis": [],
+  "pages": [],
+  "user_flows": []
 }
-No extra text, only JSON.
+
+If you cannot comply, return empty arrays but NEVER break JSON format.
 `
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      temperature: 0.7
-    })
-  });
-
-  const data = await response.json();
-
-  const raw = data?.choices?.[0]?.message?.content || "";
-
-  try {
-    return JSON.parse(raw);
-  } catch (e) {
-    const match = raw.match(/\{[\s\S]*\}/);
-    if (match) {
-      return JSON.parse(match[0]);
-    }
-
-    return {
-      error: "Invalid AI response",
-      raw
-    };
-  }
 }
