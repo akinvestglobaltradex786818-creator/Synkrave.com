@@ -6,12 +6,14 @@ import { normalizeResponse } from "../lib/normalize";
 const router = Router();
 
 router.post("/generate", async (req, res) => {
-  const { prompt, type } = req.body;
+  const { prompt, type } = req.body || {};
 
-  let finalPrompt = prompt;
+  let finalPrompt: string = "";
 
   if (type && Object.prototype.hasOwnProperty.call(templates, type)) {
     finalPrompt = templates[type as keyof typeof templates];
+  } else if (prompt) {
+    finalPrompt = prompt;
   }
 
   if (!finalPrompt) {
@@ -21,7 +23,7 @@ router.post("/generate", async (req, res) => {
   try {
     const result = await generateWithAI(finalPrompt);
 
-    if (result.error) {
+    if (result?.error) {
       return res.status(500).json(result);
     }
 
