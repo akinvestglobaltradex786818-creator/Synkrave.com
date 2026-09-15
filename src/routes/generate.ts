@@ -8,9 +8,9 @@ const router = Router();
 router.post("/generate", async (req, res) => {
   const { prompt, type } = req.body || {};
 
-  let finalPrompt: string = "";
+  let finalPrompt = "";
 
-  if (type && Object.prototype.hasOwnProperty.call(templates, type)) {
+  if (type && templates[type as keyof typeof templates]) {
     finalPrompt = templates[type as keyof typeof templates];
   } else if (prompt) {
     finalPrompt = prompt;
@@ -23,13 +23,9 @@ router.post("/generate", async (req, res) => {
   try {
     const result = await generateWithAI(finalPrompt);
 
-    if (result?.error) {
-      return res.status(500).json(result);
-    }
-
     return res.json(normalizeResponse(result));
 
-  } catch (err) {
+  } catch {
     return res.status(500).json({
       error: "AI request failed"
     });
