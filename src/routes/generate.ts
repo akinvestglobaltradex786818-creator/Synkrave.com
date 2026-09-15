@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { generateWithAI } from "../lib/openai";
-import { templates } from "../templates";
+import { templates } from "../lib/template";
 
 const router = Router();
 
@@ -14,7 +14,6 @@ router.post("/generate", async (req, res) => {
     finalPrompt = templates[type as keyof typeof templates];
   }
 
-  // validation
   if (!finalPrompt) {
     return res.status(400).json({ error: "Prompt required" });
   }
