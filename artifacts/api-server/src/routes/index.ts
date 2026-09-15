@@ -1,12 +1,9 @@
-import { Router, type IRouter } from "express";
-import healthRouter from "./health";
-import { generateHandler } from "../../../../lib/api/generate";
+import { Router } from "express";
 
-const router: IRouter = Router();
+const healthRouter = Router();
 
-router.use(healthRouter);
+healthRouter.get("/health", (req, res) => {
+  res.json({ status: "ok" });
+});
 
-// 🔥 YOUR NEW ROUTE
-router.post("/generate", generateHandler);
-
-export default router;
+export default healthRouter;
