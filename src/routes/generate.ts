@@ -9,9 +9,9 @@ router.post("/generate", (req, res) => {
 
   let finalPrompt = prompt;
 
-  // اگر user نے template type دیا ہو
-  if (type && templates[type]) {
-    finalPrompt = templates[type];
+  // template handling (safe)
+  if (type && Object.prototype.hasOwnProperty.call(templates, type)) {
+    finalPrompt = templates[type as keyof typeof templates];
   }
 
   // اگر کچھ بھی نہ ملا
@@ -19,7 +19,7 @@ router.post("/generate", (req, res) => {
     return res.status(400).json({ error: "Prompt required" });
   }
 
-  // اصل generator call
+  // generator call
   const result = generateBlueprint(finalPrompt);
 
   return res.json(result);
