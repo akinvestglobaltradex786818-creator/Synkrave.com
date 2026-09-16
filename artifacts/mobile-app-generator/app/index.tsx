@@ -1049,10 +1049,32 @@ export default function HomeScreen() {
     setGeneratedFiles({ html: "", css: "", js: "" });
     setIsLivePreview(false);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const generatedHtml = await localGenerateApp(prompt);
-    setIsGenerating(false);
-    setGeneratedCode(generatedHtml);
-    setGeneratedFiles(splitGeneratedFiles(generatedHtml));
+    try {
+  const response = await fetch("/api/generate", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      prompt: prompt.trim()
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error("Server error");
+  }
+
+  const data = await response.json();
+
+  setGeneratedCode(data.html || "");
+  setGeneratedFiles(data);
+  setIsLivePreview(true);
+
+} catch (error) {
+  setError("Server se response nahi aya");
+}
+
+setIsGenerating(false);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
