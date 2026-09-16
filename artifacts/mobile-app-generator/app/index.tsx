@@ -2145,6 +2145,5 @@ const styles = StyleSheet.create({
   protectionStatusText: { fontFamily: "Inter_600SemiBold", fontSize: 11 },
   footer: { alignItems: "center", flexDirection: "row", gap: 7, justifyContent: "center", marginTop: 23 },
   footerText: { fontFamily: "Inter_400Regular", fontSize: 11 },
-// redeploy trigger
 });
 
