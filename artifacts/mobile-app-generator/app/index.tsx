@@ -2146,3 +2146,4 @@ const styles = StyleSheet.create({
   footer: { alignItems: "center", flexDirection: "row", gap: 7, justifyContent: "center", marginTop: 23 },
   footerText: { fontFamily: "Inter_400Regular", fontSize: 11 },
 });
+// redeploy trigger
