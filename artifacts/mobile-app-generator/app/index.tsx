@@ -231,7 +231,7 @@ const templateCatalog: TemplateDefinition[] = [
   },
   {
     id: "corporate",
-    title: "Corporate Business Site",
+    title: "Corporate Business schema",
     description: "Enterprise services and trust signals",
     prompt:
       "A corporate business website with services, trust signals, and contact CTA",
