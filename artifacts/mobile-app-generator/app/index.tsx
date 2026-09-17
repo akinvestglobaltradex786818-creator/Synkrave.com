@@ -265,7 +265,7 @@ const templateCatalog: TemplateDefinition[] = [
   },
   {
     id: "education",
-    title: "Educational LMS Portal",
+    title: "Educational LMS schema",
     description: "Courses, lessons, and learner progress",
     prompt:
       "An educational LMS portal with courses, lessons, and learner progress",
