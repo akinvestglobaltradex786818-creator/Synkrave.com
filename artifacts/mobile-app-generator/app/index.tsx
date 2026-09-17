@@ -1065,7 +1065,8 @@ setIsGenerating(false);
               }}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
-              placeholder="Describe your app..."
+             placeholder="Describe your database system or schema..."
+
               placeholderTextColor={colors.mutedForeground}
               multiline
               textAlignVertical="top"
