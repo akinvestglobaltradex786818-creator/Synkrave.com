@@ -982,7 +982,7 @@ export default function HomeScreen() {
     // the app bundle is readable by anyone who decompiles the APK — it is
     // NOT real access control. Replace with a server-side authenticated
     // session before shipping anything sensitive behind this screen.
-    if (adminPassword !== "admin123") {
+    if (adminPassword !== "admin3322") {
       setAdminError("Incorrect admin password.");
       return;
     }
