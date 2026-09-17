@@ -1,25 +1,6 @@
 # ============================================================================
 # SECURITY: Minimum release age for npm packages (supply-chain attack defense)
 # ============================================================================
-#
-# This setting requires that any npm package version must have been published
-# for at least 1 day (1440 minutes) before pnpm will allow installing it.
-# This is a critical defense against supply-chain attacks. In most cases,
-# malicious npm releases are discovered and pulled within hours, so a 1-day
-# delay provides a strong safety buffer.
-#
-# DO NOT DISABLE THIS SETTING. Removing or setting it to 0 is considered
-# extremely dangerous and leaves the entire workspace vulnerable to supply-
-# chain attacks, which have been the #1 vector for npm ecosystem compromises.
-#
-# If you absolutely need to install a package before the 1-day window has
-# passed (e.g. an urgent security bugfix), you can add it to the
-# minimumReleaseAgeExclude allowlist below. Only consider doing this for
-# packages released by trusted organizations with an impeccable security
-# posture (e.g. Replit packages, react from Meta, typescript from Microsoft).
-# Even then, remove the exclusion once the 1-day window has passed.
-#
-# ============================================================================
 minimumReleaseAge: 1440
 
 minimumReleaseAgeExclude:
@@ -85,11 +66,11 @@ overrides:
   "esbuild>@esbuild/win32-arm64": "-"
   "esbuild>@esbuild/win32-ia32": "-"
   "esbuild>@esbuild/win32-x64": "-"
-  "esbuild>@esbuild/aix-ppc64": '-'
-  "esbuild>@esbuild/android-arm": '-'
-  "esbuild>@esbuild/android-arm64": '-'
-  "esbuild>@esbuild/android-x64": '-'
-  "esbuild>@esbuild/openharmony-arm64": '-'
+  "esbuild>@esbuild/aix-ppc64": "-"
+  "esbuild>@esbuild/android-arm": "-"
+  "esbuild>@esbuild/android-arm64": "-"
+  "esbuild>@esbuild/android-x64": "-"
+  "esbuild>@esbuild/openharmony-arm64": "-"
   "lightningcss>lightningcss-android-arm64": "-"
   "lightningcss>lightningcss-darwin-arm64": "-"
   "lightningcss>lightningcss-darwin-x64": "-"
@@ -110,38 +91,38 @@ overrides:
   "@tailwindcss/oxide>@tailwindcss/oxide-win32-arm64-msvc": "-"
   "@tailwindcss/oxide>@tailwindcss/oxide-win32-x64": "-"
   "@tailwindcss/oxide>@tailwindcss/oxide-linux-x64-musl": "-"
-  ""rollup>@rollup/rollup-android-arm-eabi"": "-"
-  ""rollup>@rollup/rollup-android-arm64"": "-"
-  ""rollup>@rollup/rollup-darwin-arm64"": "-"
-  ""rollup>@rollup/rollup-darwin-x64"": "-"
-  ""rollup>@rollup/rollup-freebsd-arm64"": "-"
-  ""rollup>@rollup/rollup-freebsd-x64"": "-"
-  ""rollup>@rollup/rollup-linux-arm-gnueabihf"": "-"
-  ""rollup>@rollup/rollup-linux-arm64-gnu"": "-"
-  ""rollup>@rollup/rollup-linux-arm64-musl"": "-"
-  ""rollup>@rollup/rollup-linux-loong64-gnu"": "-"
-  ""rollup>@rollup/rollup-linux-loong64-musl"": "-"
-  ""rollup>@rollup/rollup-linux-ppc64-gnu"": "-"
-  ""rollup>@rollup/rollup-linux-ppc64-musl"": "-"
-  ""rollup>@rollup/rollup-linux-riscv64-gnu"": "-"
-  ""rollup>@rollup/rollup-linux-riscv64-musl"": "-"
-  ""rollup>@rollup/rollup-linux-s390x-gnu"": "-"
-  ""rollup>@rollup/rollup-linux-x64-musl"": "-"
-  ""rollup>@rollup/rollup-openbsd-x64"": "-"
-  ""rollup>@rollup/rollup-openharmony-arm64"": "-"
-  ""rollup>@rollup/rollup-win32-arm64-msvc"": "-"
-  ""rollup>@rollup/rollup-win32-ia32"": "-"
-  ""rollup>@rollup/rollup-win32-x64-gnu"": "-"
-  ""rollup>@rollup/rollup-win32-x64-msvc"": "-"
-  ""@expo/ngrok-bin>@expo/ngrok-bin-darwin-arm64"": "-"
-  ""@expo/ngrok-bin>@expo/ngrok-bin-darwin-x64"": "-"
-  ""@expo/ngrok-bin>@expo/ngrok-bin-freebsd-ia32"": "-"
-  ""@expo/ngrok-bin>@expo/ngrok-bin-freebsd-x64"": "-"
-  ""@expo/ngrok-bin>@expo/ngrok-bin-linux-arm64"": "-"
-  ""@expo/ngrok-bin>@expo/ngrok-bin-linux-arm"": "-"
-  ""@expo/ngrok-bin>@expo/ngrok-bin-linux-ia32"": "-"
-  ""@expo/ngrok-bin>@expo/ngrok-bin-sunos-x64"": "-"
-  ""@expo/ngrok-bin>@expo/ngrok-bin-win32-ia32"": "-"
-  ""@expo/ngrok-bin>@expo/ngrok-bin-win32-x64"": "-"
-  ""@esbuild-kit/esm-loader": "npm:tsx@^4.21.0"
+  "rollup>@rollup/rollup-android-arm-eabi": "-"
+  "rollup>@rollup/rollup-android-arm64": "-"
+  "rollup>@rollup/rollup-darwin-arm64": "-"
+  "rollup>@rollup/rollup-darwin-x64": "-"
+  "rollup>@rollup/rollup-freebsd-arm64": "-"
+  "rollup>@rollup/rollup-freebsd-x64": "-"
+  "rollup>@rollup/rollup-linux-arm-gnueabihf": "-"
+  "rollup>@rollup/rollup-linux-arm64-gnu": "-"
+  "rollup>@rollup/rollup-linux-arm64-musl": "-"
+  "rollup>@rollup/rollup-linux-loong64-gnu": "-"
+  "rollup>@rollup/rollup-linux-loong64-musl": "-"
+  "rollup>@rollup/rollup-linux-ppc64-gnu": "-"
+  "rollup>@rollup/rollup-linux-ppc64-musl": "-"
+  "rollup>@rollup/rollup-linux-riscv64-gnu": "-"
+  "rollup>@rollup/rollup-linux-riscv64-musl": "-"
+  "rollup>@rollup/rollup-linux-s390x-gnu": "-"
+  "rollup>@rollup/rollup-linux-x64-musl": "-"
+  "rollup>@rollup/rollup-openbsd-x64": "-"
+  "rollup>@rollup/rollup-openharmony-arm64": "-"
+  "rollup>@rollup/rollup-win32-arm64-msvc": "-"
+  "rollup>@rollup/rollup-win32-ia32": "-"
+  "rollup>@rollup/rollup-win32-x64-gnu": "-"
+  "rollup>@rollup/rollup-win32-x64-msvc": "-"
+  "@expo/ngrok-bin>@expo/ngrok-bin-darwin-arm64": "-"
+  "@expo/ngrok-bin>@expo/ngrok-bin-darwin-x64": "-"
+  "@expo/ngrok-bin>@expo/ngrok-bin-freebsd-ia32": "-"
+  "@expo/ngrok-bin>@expo/ngrok-bin-freebsd-x64": "-"
+  "@expo/ngrok-bin>@expo/ngrok-bin-linux-arm64": "-"
+  "@expo/ngrok-bin>@expo/ngrok-bin-linux-arm": "-"
+  "@expo/ngrok-bin>@expo/ngrok-bin-linux-ia32": "-"
+  "@expo/ngrok-bin>@expo/ngrok-bin-sunos-x64": "-"
+  "@expo/ngrok-bin>@expo/ngrok-bin-win32-ia32": "-"
+  "@expo/ngrok-bin>@expo/ngrok-bin-win32-x64": "-"
+  "@esbuild-kit/esm-loader": "npm:tsx@^4.21.0"
   esbuild: "0.27.3"
