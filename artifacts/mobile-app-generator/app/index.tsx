@@ -271,42 +271,96 @@ const templateCatalog: TemplateDefinition[] = [
     icon: "book-open",
     locked: true,
   },
-  {
-  id: "startup",
-  title: "SaaS Infrastructure Blueprint",
-  description: "Cloud architecture, scaling, and database clusters",
-  prompt: "A comprehensive SaaS infrastructure database schema for users, multi-tenant scaling, and cloud clusters",
-  icon: "layers",
-  locked: true,
-},
-{
-  id: "secure-login",
-  title: "Auth & OAuth Identity Schema",
-  description: "User authentication, JWT, and OAuth tokens data",
-  prompt: "A secure authentication database schema for user logins, OAuth profiles, JWT sessions, and password resets",
-  icon: "lock",
-  locked: true,
-},
-
-  {
-   {
-  id: "pricing",
-  title: "Subscription & Billing Model",
-  description: "Plans, billing tiers, and recurring invoices",
-  prompt: "A subscription billing database schema for service plans, invoices, transactions, and user tiers",
-  icon: "credit-card",
-  locked: true,
-},
-
-  {
-    id: "custom",
-    title: "Custom Blueprint",
-    description: "Start from your own product brief",
-    prompt: "A custom app based on my requirements",
+    {
+    id: "startup",
+    title: "SaaS Infrastructure Blueprint",
+    description: "Cloud architecture, scaling, and database clusters",
+    prompt: "A comprehensive SaaS infrastructure database schema for users, multi-tenant scaling, and cloud clusters",
     icon: "layers",
     locked: true,
   },
+  {
+    id: "secure-login",
+    title: "Auth & OAuth Identity Schema",
+    description: "User authentication, JWT, and OAuth tokens data",
+    prompt: "A secure authentication database schema for user logins, OAuth profiles, JWT sessions, and password resets",
+    icon: "lock",
+    locked: true,
+  },
+  {
+    id: "pricing",
+    title: "Subscription & Billing Model",
+    description: "Plans, billing tiers, and recurring invoices",
+    prompt: "A subscription billing database schema for service plans, invoices, transactions, and user tiers",
+    icon: "credit-card",
+    locked: true,
+  },
+  {
+    id: "corporate",
+    title: "Corporate Business Schema",
+    description: "Company hierarchy, departments, and payroll data",
+    prompt: "A database schema for enterprise corporate structure, employee data, departments, and payroll systems",
+    icon: "briefcase",
+    locked: true,
+  },
+  {
+    id: "finance",
+    title: "Financial Analytics Schema",
+    description: "Ledgers, balance sheets, and transaction logs",
+    prompt: "A financial data schema for tracking business accounts, general ledgers, expenses, and transaction history",
+    icon: "pie-chart",
+    locked: true,
+  },
+  {
+    id: "realestate",
+    title: "Real Estate Data Blueprint",
+    description: "Property listings, agents, and contract schemas",
+    prompt: "A database structure for property specifications, real estate listings, buyer/seller agents, and sales contracts",
+    icon: "home",
+    locked: true,
+  },
+  {
+    id: "lms",
+    title: "Educational LMS Schema",
+    description: "Courses, student enrollments, and grading models",
+    prompt: "An educational platform database schema for managing courses, student enrollments, lessons, and exam grading tracking",
+    icon: "book-open",
+    locked: true,
+  },
+  {
+    id: "custom",
+    title: "Custom JSON/Zod Blueprint",
+    description: "Start from your own validated schema brief",
+    prompt: "A custom JSON and Zod-validated system blueprint based on my requirements",
+    icon: "layers",
+    locked: true,
+  },
+  {
+    id: "healthcare",
+    title: "Healthcare & Patient Records DB Schema",
+    description: "Secure HIPAA-compliant patient, appointment, and medical history models",
+    prompt: "A secure healthcare database schema for HIPAA-compliant patient, appointment, provider, and medical history models",
+    icon: "activity",
+    locked: true,
+  },
+  {
+    id: "fintech",
+    title: "FinTech Ledger & Crypto Wallet Architecture",
+    description: "Double-entry ledger transactions, balances, and security token data",
+    prompt: "A FinTech architecture blueprint for double-entry ledger transactions, account balances, crypto wallets, and security token data",
+    icon: "credit-card",
+    locked: true,
+  },
+  {
+    id: "logistics",
+    title: "Logistics & Supply Chain Tracker Schema",
+    description: "Shipments, warehouses, fleet status, and delivery milestones",
+    prompt: "A logistics and supply-chain database schema for shipments, warehouses, fleet status, routes, and delivery milestones",
+    icon: "package",
+    locked: true,
+  }
 ];
+
 
 type GeneratedFiles = { html: string; css: string; js: string };
 type SpeechTarget = "prompt" | "chat";
