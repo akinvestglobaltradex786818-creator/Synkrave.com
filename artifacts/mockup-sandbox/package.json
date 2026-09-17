@@ -1,14 +1,11 @@
 {
-  "name": "@workspace/mockup-sandbox",
-  "version": "2.0.0",
-  "type": "module",
+  "name": "mockup-sandbox",
   "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "vite dev",
+    "dev": "vite",
     "build": "vite build",
-    "vercel-build": "vite build",
-    "preview": "vite preview",
-    "typecheck": "echo 'Skipping frontend typecheck'"
+    "preview": "vite preview"
   },
   "devDependencies": {
     "@hookform/resolvers": "^3.10.0",
