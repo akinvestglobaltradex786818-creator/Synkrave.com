@@ -1087,7 +1087,8 @@ setIsGenerating(false);
                   { backgroundColor: isListening ? colors.primary : colors.secondary, opacity: pressed ? 0.72 : 1 },
                 ]}
               >
-                <Feather name={isListening ? "square" : "mic"} size={18} color={isListening ? colors.primaryForeground : colors.foreground} />
+                <Feather name={isListening ? "mic-off" : "mic"}
+ size={18} color={isListening ? colors.primaryForeground : colors.foreground} />
               </Pressable>
             </View>
           </View>
