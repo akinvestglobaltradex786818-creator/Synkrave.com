@@ -283,7 +283,8 @@ const templateCatalog: TemplateDefinition[] = [
   },
   {
     id: "secure-login",
-    title: "Modern Secure Login",
+    title: "Auth & OAuth Identity Schema",
+
     description: "A polished authentication flow",
     prompt:
       "A modern secure login screen with registration and password recovery",
