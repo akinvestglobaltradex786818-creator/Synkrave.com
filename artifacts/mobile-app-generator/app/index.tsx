@@ -190,26 +190,35 @@ const starterPrompts = [
   "Recipes & meal planner database
 ",
 ];
-
 const templateCatalog: TemplateDefinition[] = [
   {
-    id: "tailor",
-    title: "Local Tailor Shop Website",
-    description: "Services, fittings, and contact",
+    id: "grocery",
+    title: "E-commerce Core Schema",
+    description: "Products, orders, and delivery models",
     prompt:
-      "A local tailor shop website with services, pricing, and booking CTA",
-    icon: "scissors",
+      "An e-commerce database schema for products, orders, customers, payments, and delivery",
+    icon: "shopping-bag",
     locked: false,
+  },
+  {
+    id: "tailor",
+    title: "Simple Inventory Schema",
+    description: "Services, products, and stock data",
+    prompt:
+      "A simple inventory database schema for services, products, stock levels, and inventory movements",
+    icon: "database",
+    locked: true,
   },
   {
     id: "barber",
-    title: "Barber Shop Page",
-    description: "Cuts, hours, and appointments",
+    title: "Service Booking DB Schema",
+    description: "Cuts, hours, and appointments data",
     prompt:
-      "A barber shop page with services, opening hours, and appointment CTA",
-    icon: "user",
-    locked: false,
+      "A service booking database schema for services, business hours, customers, and appointments",
+    icon: "calendar",
+    locked: true,
   },
+
   {
     id: "grocery",
     title: "Simple Grocery Store",
