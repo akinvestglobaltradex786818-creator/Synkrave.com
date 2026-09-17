@@ -1,20 +1,16 @@
 {
   "version": 2,
-  "builds": [
+  "buildCommand": "pnpm --filter @workspace/mockup-sandbox build",
+  "outputDirectory": "artifacts/mockup-sandbox/dist",
+  "framework": "vite",
+  "rewrites": [
     {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": { "distDir": "artifacts/mockup-sandbox/dist" }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/index.ts"
+      "source": "/api/:path*",
+      "destination": "/api/index.ts"
     },
     {
-      "src": "/(.*)",
-      "dest": "artifacts/mockup-sandbox/dist/$1"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
