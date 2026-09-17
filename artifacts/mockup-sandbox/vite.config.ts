@@ -8,8 +8,6 @@ import { mockupPreviewPlugin } from "./mockupPreviewPlugin";
 const rawPort = process.env.PORT || "5173";
 const port = Number(rawPort);
 
-// The app is deployed at the domain root. Keep this absolute so Vite emits
-// usable asset URLs when the build is run from the workspace root on Vercel.
 const basePath = process.env.BASE_PATH || "/";
 
 export default defineConfig({
@@ -19,16 +17,6 @@ export default defineConfig({
     react(),
     tailwindcss(),
     process.env.NODE_ENV !== "production" && runtimeErrorOverlay(),
-    ...(process.env.NODE_ENV !== "production" &&
-    process.env.REPL_ID !== undefined
-      ? [
-          await import("@replit/vite-plugin-cartographer").then((m) =>
-            m.cartographer({
-              root: path.resolve(import.meta.dirname, ".."),
-            }),
-          ),
-        ]
-      : []),
   ].filter(Boolean),
 
   resolve: {
