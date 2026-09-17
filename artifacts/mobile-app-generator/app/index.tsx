@@ -293,7 +293,8 @@ const templateCatalog: TemplateDefinition[] = [
   },
   {
     id: "pricing",
-    title: "Interactive Pricing Plan",
+    title: "Subscription & Billing Model",
+
     description: "Plans designed for conversion",
     prompt: "An interactive pricing plan with selectable subscription tiers",
     icon: "credit-card",
