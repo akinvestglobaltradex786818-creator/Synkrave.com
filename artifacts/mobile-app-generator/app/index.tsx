@@ -745,7 +745,7 @@ export default function HomeScreen() {
 
   const handleTemplatePress = (template: TemplateDefinition) => {
     if (template.locked && !isAuthenticated) {
-      if (trialUseCount >= 3) {
+      if (trialUseCount >= 1) {
         openAuthModal(`Unlock ${template.title} after your 3 free trials`);
         return;
       }
