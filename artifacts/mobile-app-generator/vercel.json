@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "buildCommand": "EXPO_PUBLIC_DOMAIN=$VERCEL_URL pnpm run build",
+  "outputDirectory": "static-build",
+  "functions": {
+    "api/index.js": {
+      "includeFiles": [
+        "static-build/**",
+        "server/templates/**"
+      ]
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api"
+    }
+  ]
+}
