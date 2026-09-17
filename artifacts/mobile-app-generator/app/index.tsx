@@ -1038,7 +1038,8 @@ setIsGenerating(false);
 
           <Text style={[styles.title, { color: colors.foreground }]}>
             Turn ideas{"\n"}
-            <Text style={{ color: colors.primary }}>into apps.</Text>
+<Text style={{ color: colors.primary }}>into blueprints.</Text>
+
           </Text>
           <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
             Describe what you want to build. We&apos;ll shape the first version for you.
