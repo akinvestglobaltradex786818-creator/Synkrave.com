@@ -993,29 +993,42 @@ export default function HomeScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
-  const handleGenerate = async () => {
+    const handleGenerate = async () => {
     Keyboard.dismiss();
     if (!prompt.trim()) {
       setError("Add a short description to get started.");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       return;
     }
+
+    if (!isAuthenticated && trialUseCount >= 1) {
+      setError("Your free schema has been used. Upgrade to generate another blueprint.");
+      setIsGenerating(false);
+      return;
+    }
+
     setError("");
     setIsGenerating(true);
     setGeneratedCode("");
     setGeneratedFiles({ html: "", css: "", js: "" });
     setIsLivePreview(false);
+
+    if (!isAuthenticated) {
+      setTrialUseCount(1);
+    }
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
-  const response = await fetch("/api/generate", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      prompt: prompt.trim()
-    })
-  });
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          prompt: prompt.trim()
+        })
+      });
+
 
   if (!response.ok) {
     throw new Error("Server error");
