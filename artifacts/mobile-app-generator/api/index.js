@@ -1,13 +1,17 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const STATIC_ROOT = path.resolve(process.cwd(), "static-build");
-const TEMPLATE_PATH = path.resolve(
-  process.cwd(),
+// Vercel's runtime working directory is not guaranteed to be the package root.
+// Resolve all project files from this function's location instead.
+const PROJECT_ROOT = path.resolve(__dirname, "..");
+const STATIC_ROOT = path.join(PROJECT_ROOT, "static-build");
+const TEMPLATE_PATH = path.join(
+  PROJECT_ROOT,
   "server",
   "templates",
   "landing-page.html",
 );
+const APP_CONFIG_PATH = path.join(PROJECT_ROOT, "app.json");
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -32,7 +36,7 @@ function escapeHtml(value) {
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
-    .replaceAll("'", "'");
+    .replaceAll("'", "&#39;");
 }
 
 function toScriptString(value) {
@@ -44,10 +48,7 @@ function toScriptString(value) {
 
 function getAppName() {
   try {
-    const appJson = JSON.parse(
-      fs.readFileSync(path.resolve(process.cwd(), "app.json"), "utf8"),
-    );
-
+    const appJson = JSON.parse(fs.readFileSync(APP_CONFIG_PATH, "utf8"));
     return typeof appJson.expo?.name === "string"
       ? appJson.expo.name
       : "App Landing Page";
@@ -65,7 +66,7 @@ function send(res, status, contentType, body) {
 function serveLandingPage(req, res) {
   const template = fs.readFileSync(TEMPLATE_PATH, "utf8");
   const protocol = req.headers["x-forwarded-proto"] || "https";
-  const host = req.headers["x-forwarded-host"] || req.headers.host;
+  const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost";
   const baseUrl = `${protocol}://${host}`;
   const expsUrl = `exps://${host}`;
 
@@ -128,24 +129,31 @@ function serveStaticFile(pathname, res) {
 }
 
 module.exports = (req, res) => {
-  const requestUrl = new URL(
-    req.url || "/",
-    `https://${req.headers.host || "localhost"}`,
-  );
-  const pathname = requestUrl.pathname;
-  const platform = req.headers["expo-platform"];
+  try {
+    const requestUrl = new URL(
+      req.url || "/",
+      `https://${req.headers.host || "localhost"}`,
+    );
+    const pathname = requestUrl.pathname;
+    const platform = req.headers["expo-platform"];
 
-  if (pathname === "/" || pathname === "/manifest") {
-    if (platform === "ios" || platform === "android") {
-      serveManifest(platform, res);
-      return;
+    if (pathname === "/" || pathname === "/manifest") {
+      if (platform === "ios" || platform === "android") {
+        serveManifest(platform, res);
+        return;
+      }
+
+      if (pathname === "/") {
+        serveLandingPage(req, res);
+        return;
+      }
     }
 
-    if (pathname === "/") {
-      serveLandingPage(req, res);
-      return;
-    }
+    serveStaticFile(pathname, res);
+  } catch (error) {
+    console.error("Vercel API handler failed:", error);
+    send(res, 500, "application/json; charset=utf-8", JSON.stringify({
+      error: "Internal server error",
+    }));
   }
-
-  serveStaticFile(pathname, res);
 };
