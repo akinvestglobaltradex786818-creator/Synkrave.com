@@ -8,6 +8,8 @@ import { mockupPreviewPlugin } from "./mockupPreviewPlugin";
 const rawPort = process.env.PORT || "5173";
 const port = Number(rawPort);
 
+// The app is deployed at the domain root. Keep this absolute so Vite emits
+// usable asset URLs when the build is run from the workspace root on Vercel.
 const basePath = process.env.BASE_PATH || "/";
 
 export default defineConfig({
