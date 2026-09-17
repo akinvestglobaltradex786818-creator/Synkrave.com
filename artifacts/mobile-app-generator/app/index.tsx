@@ -4,7 +4,6 @@ import { File, Paths } from "expo-file-system";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import * as Linking from "expo-linking";
-import * as Location from "expo-location";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
 import { createElement, useEffect, useMemo, useRef, useState } from "react";
@@ -691,49 +690,7 @@ export default function HomeScreen() {
   // the same pattern large apps use. If the person declines the permission,
   // or geocoding fails for any reason, this falls back to the device's own
   // language setting instead of forcing a request retry.
-  useEffect(() => {
-    let isMounted = true;
-    const detectLanguageFromLocation = async () => {
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== "granted") {
-          throw new Error("Location permission not granted");
-        }
-        const position = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Low,
-        });
-        const [place] = await Location.reverseGeocodeAsync({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        });
-        const countryCode = place?.isoCountryCode?.toUpperCase();
-        const mapped = countryCode ? countryToLanguage[countryCode] : undefined;
-        if (mapped && isMounted) {
-          setVoiceLanguage(mapped);
-          return;
-        }
-        throw new Error("No language mapping for detected country");
-      } catch {
-        // Permission denied, location unavailable, or no mapping — fall
-        // back to whatever language the device itself is set to.
-        try {
-          const deviceLocale = Intl.DateTimeFormat().resolvedOptions().locale ?? "en-US";
-          const prefix = deviceLocale.split("-")[0]?.toLowerCase();
-          const match = worldLanguages.find((language) =>
-            language.value.toLowerCase().startsWith(prefix ?? "en"),
-          );
-          if (match && isMounted) setVoiceLanguage(match.value);
-        } catch {
-          // Keep the en-US default already in state.
-        }
-      }
-    };
-    void detectLanguageFromLocation();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
+  
   const filteredLanguages = useMemo(() => {
     const query = languageSearch.trim().toLowerCase();
     if (!query) return worldLanguages;
