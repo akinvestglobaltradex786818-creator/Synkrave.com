@@ -1,3 +1,4 @@
+title: "SaaS Infrastructure Blueprint",
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { File, Paths } from "expo-file-system";
@@ -273,7 +274,8 @@ const templateCatalog: TemplateDefinition[] = [
   },
   {
     id: "startup",
-    title: "Tech Startup Landing",
+    title: "SaaS Infrastructure Blueprint",
+
     description: "A launch-ready product story",
     prompt: "A tech startup landing page with product benefits and waitlist",
     icon: "zap",
