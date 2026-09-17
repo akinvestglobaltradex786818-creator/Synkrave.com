@@ -1169,7 +1169,10 @@ setIsGenerating(false);
             <ActivityIndicator color={colors.primaryForeground} />
           ) : (
             <>
-              <Text style={[styles.generateText, { color: colors.primaryForeground }]}>Generate App</Text>
+              <Text style={[styles.generateText, { color: colors.primaryForeground }]}>
+  Generate Blueprint
+</Text>
+
               <Feather name="arrow-up-right" size={20} color={colors.primaryForeground} />
             </>
           )}
