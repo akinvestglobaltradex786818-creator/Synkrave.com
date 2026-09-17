@@ -9,7 +9,11 @@
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.synkrave.app"
+      "bundleIdentifier": "com.synkrave.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "PocketDev AI uses the camera to scan screenshots for the Scan & Clone tool.",
+        "NSMicrophoneUsageDescription": "synkrave uses the microphone for multilingual voice-to-code prompts."
+      }
     },
     "android": {
       "package": "com.synkrave.app",
@@ -19,14 +23,6 @@
         "RECORD_AUDIO",
         "READ_MEDIA_IMAGES"
       ]
-    },
-    "ios": {
-      "supportsTablet": false,
-      "bundleIdentifier": "com.synkrave.app",
-      "infoPlist": {
-        "NSCameraUsageDescription": "PocketDev AI uses the camera to scan screenshots for the Scan & Clone tool.",
-        "NSMicrophoneUsageDescription": "synkrave uses the microphone for multilingual voice-to-code prompts."
-      }
     },
     "web": {
       "favicon": "./assets/images/icon.png"
