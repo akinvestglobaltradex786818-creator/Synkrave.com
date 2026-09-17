@@ -257,7 +257,7 @@ const templateCatalog: TemplateDefinition[] = [
   },
   {
     id: "real-estate",
-    title: "Real Estate Portal",
+    title: "Real Estate data Blueprint",
     description: "Listings and property discovery",
     prompt: "A real estate portal with property listings and search filters",
     icon: "home",
