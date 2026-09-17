@@ -185,8 +185,10 @@ type TemplateDefinition = {
 };
 
 const starterPrompts = [
-  "A habit tracker with streaks",
-  "A recipe planner for busy weeks",
+  "User habits & streaks schema
+",
+  "Recipes & meal planner database
+",
 ];
 
 const templateCatalog: TemplateDefinition[] = [
