@@ -1156,7 +1156,8 @@ setIsGenerating(false);
         <Pressable
           testID="generate-button"
           accessibilityRole="button"
-          accessibilityLabel="Generate app"
+          accessibilityLabel="Generate blueprint"
+
           onPress={handleGenerate}
           disabled={isGenerating}
           style={({ pressed }) => [
