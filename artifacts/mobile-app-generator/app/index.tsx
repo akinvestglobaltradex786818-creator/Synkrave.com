@@ -185,11 +185,10 @@ type TemplateDefinition = {
 };
 
 const starterPrompts = [
-  "User habits & streaks schema
-",
-  "Recipes & meal planner database
-",
+  "User habits & streaks schema",
+  "Recipes & meal planner database"
 ];
+
 const templateCatalog: TemplateDefinition[] = [
   {
     id: "grocery",
