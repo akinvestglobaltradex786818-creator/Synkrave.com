@@ -1501,12 +1501,12 @@ setIsGenerating(false);
             </View>
           </View>
         ) : null}
-
+        
         <View style={styles.businessActions}>
           <Pressable
             testID="download-button"
             accessibilityRole="button"
-            accessibilityLabel="Download index.html"
+            accessibilityLabel="Download Blueprint JSON"
             onPress={handleDownload}
             style={({ pressed }) => [
               styles.secondaryAction,
@@ -1514,8 +1514,9 @@ setIsGenerating(false);
             ]}
           >
             <Feather name="download" size={16} color={colors.secondaryForeground} />
-            <Text style={[styles.secondaryActionText, { color: colors.secondaryForeground }]}>Download index.html</Text>
+            <Text style={[styles.secondaryActionText, { color: colors.secondaryForeground }]}>Download Blueprint JSON</Text>
           </Pressable>
+
           <Pressable
             testID="deploy-button"
             accessibilityRole="button"
