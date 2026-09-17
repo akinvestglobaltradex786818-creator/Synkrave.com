@@ -240,7 +240,7 @@ const templateCatalog: TemplateDefinition[] = [
   },
   {
     id: "financial",
-    title: "Financial Dashboard",
+    title: "Financial analytics schema",
     description: "Revenue, cash flow, and performance KPIs",
     prompt:
       "A financial dashboard with revenue, cash flow, and performance KPIs",
