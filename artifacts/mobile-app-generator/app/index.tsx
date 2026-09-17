@@ -1034,7 +1034,8 @@ setIsGenerating(false);
         </View>
 
         <View style={styles.hero}>
-          <Text style={[styles.eyebrow, { color: colors.primary }]}>PROMPT TO PRODUCT</Text>
+         <Text style={[styles.eyebrow, { color: colors.primary }]}>PROMPT TO BLUEPRINT</Text>
+
           <Text style={[styles.title, { color: colors.foreground }]}>
             Turn ideas{"\n"}
             <Text style={{ color: colors.primary }}>into apps.</Text>
