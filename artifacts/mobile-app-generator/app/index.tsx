@@ -273,33 +273,32 @@ const templateCatalog: TemplateDefinition[] = [
     locked: true,
   },
   {
-    id: "startup",
-    title: "SaaS Infrastructure Blueprint",
+  id: "startup",
+  title: "SaaS Infrastructure Blueprint",
+  description: "Cloud architecture, scaling, and database clusters",
+  prompt: "A comprehensive SaaS infrastructure database schema for users, multi-tenant scaling, and cloud clusters",
+  icon: "layers",
+  locked: true,
+},
+{
+  id: "secure-login",
+  title: "Auth & OAuth Identity Schema",
+  description: "User authentication, JWT, and OAuth tokens data",
+  prompt: "A secure authentication database schema for user logins, OAuth profiles, JWT sessions, and password resets",
+  icon: "lock",
+  locked: true,
+},
 
-    description: "A launch-ready product story",
-    prompt: "A tech startup landing page with product benefits and waitlist",
-    icon: "zap",
-    locked: true,
-  },
   {
-    id: "secure-login",
-    title: "Auth & OAuth Identity Schema",
+   {
+  id: "pricing",
+  title: "Subscription & Billing Model",
+  description: "Plans, billing tiers, and recurring invoices",
+  prompt: "A subscription billing database schema for service plans, invoices, transactions, and user tiers",
+  icon: "credit-card",
+  locked: true,
+},
 
-    description: "A polished authentication flow",
-    prompt:
-      "A modern secure login screen with registration and password recovery",
-    icon: "lock",
-    locked: true,
-  },
-  {
-    id: "pricing",
-    title: "Subscription & Billing Model",
-
-    description: "Plans designed for conversion",
-    prompt: "An interactive pricing plan with selectable subscription tiers",
-    icon: "credit-card",
-    locked: true,
-  },
   {
     id: "custom",
     title: "Custom Blueprint",
