@@ -1585,7 +1585,7 @@ setIsGenerating(false);
             <TextInput
               value={languageSearch}
               onChangeText={setLanguageSearch}
-              placeholder="Search 100+ languages..."
+              placeholder="Search languages..."
               placeholderTextColor={colors.mutedForeground}
               style={[styles.modalInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground, marginTop: 6 }]}
             />
