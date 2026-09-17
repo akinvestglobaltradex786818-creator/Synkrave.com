@@ -1502,7 +1502,8 @@ setIsGenerating(false);
               onPress={handleChatVoicePress}
               style={({ pressed }) => [styles.chatIconButton, { backgroundColor: colors.secondary, opacity: pressed ? 0.72 : 1 }]}
             >
-              <Feather name={isListening && listeningTarget === "chat" ? "square" : "mic"} size={16} color={colors.secondaryForeground} />
+              <Feather name={isListening && listeningTarget === "chat" ? "mic-off" : "mic"}
+ size={16} color={colors.secondaryForeground} />
             </Pressable>
             <Pressable
               testID="bug-fix-button"
