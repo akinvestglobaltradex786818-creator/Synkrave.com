@@ -1,12 +1,12 @@
 import express from "express";
-import * as cors from "cors";
+const cors = require("cors");   // ✅ یہی صحیح ہے
 import routes from "./routes";
 
 const app = express();
 
-app.use(cors.default()); // ⚠️ یہ important ہے
-
+app.use(cors());
 app.use(express.json());
+
 app.use("/api", routes);
 
 export default app;
