@@ -1254,11 +1254,11 @@ setIsGenerating(false);
             </View>
           </View>
           <View style={styles.templateGrid}>
-                     {/* SECTION 1: WEBSITES */}
-          <Text style={[styles.templateTitle, { color: colors.text, marginTop: 10, fontSize: 18, fontWeight: 'bold' }]}>
+   }          {/* SECTION 1: WEBSITES */}
+          <Text style={[styles.templateTitle || styles.sectionTitle, { color: colors.foreground, marginTop: 15, fontSize: 18, fontWeight: 'bold' }]}>
             Website Blueprints
           </Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: 10 }}>
+          <View style={styles.templateGrid}>
             {displayedWebsites.map((template) => {
               const isLocked = template.locked && !isAuthenticated;
               return (
@@ -1270,17 +1270,17 @@ setIsGenerating(false);
                   onPress={() => handleTemplateSelect(template)}
                   style={({ pressed }) => [
                     styles.templateCard,
-                    { backgroundColor: colors.card, opacity: pressed ? 0.7 : 1 }
+                    { opacity: pressed ? 0.7 : 1 }
                   ]}
                 >
-                  <View style={styles.templateIconContainer}>
+                  <View style={styles.templateIconContainer || styles.iconContainer}>
                     <Feather name={template.icon} size={24} color={colors.primary} />
                   </View>
-                  <Text style={[styles.templateCardTitle, { color: colors.text }]}>{template.title}</Text>
-                  <Text style={[styles.templateCardDesc, { color: colors.textMuted }]}>{template.description}</Text>
+                  <Text style={[styles.templateName, { color: colors.foreground }]}>{template.title}</Text>
+                  <Text style={[styles.templateDescription, { color: colors.mutedForeground }]}>{template.description}</Text>
                   {isLocked && (
-                    <View style={styles.lockContainer}>
-                      <Feather name="lock" size={16} color={colors.textMuted} />
+                    <View style={styles.lockContainer || { position: 'absolute', right: 10, top: 10 }}>
+                      <Feather name="lock" size={16} color={colors.mutedForeground} />
                     </View>
                   )}
                 </Pressable>
@@ -1300,10 +1300,10 @@ setIsGenerating(false);
           )}
 
           {/* SECTION 2: AI AGENTS */}
-          <Text style={[styles.templateTitle, { color: colors.text, marginTop: 20, fontSize: 18, fontWeight: 'bold' }]}>
+          <Text style={[styles.templateTitle || styles.sectionTitle, { color: colors.foreground, marginTop: 25, fontSize: 18, fontWeight: 'bold' }]}>
             AI Agent Blueprints
           </Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: 10 }}>
+          <View style={styles.templateGrid}>
             {displayedAgents.map((template) => {
               const isLocked = template.locked && !isAuthenticated;
               return (
@@ -1315,17 +1315,17 @@ setIsGenerating(false);
                   onPress={() => handleTemplateSelect(template)}
                   style={({ pressed }) => [
                     styles.templateCard,
-                    { backgroundColor: colors.card, opacity: pressed ? 0.7 : 1 }
+                    { opacity: pressed ? 0.7 : 1 }
                   ]}
                 >
-                  <View style={styles.templateIconContainer}>
+                  <View style={styles.templateIconContainer || styles.iconContainer}>
                     <Feather name={template.icon} size={24} color={colors.primary} />
                   </View>
-                  <Text style={[styles.templateCardTitle, { color: colors.text }]}>{template.title}</Text>
-                  <Text style={[styles.templateCardDesc, { color: colors.textMuted }]}>{template.description}</Text>
+                  <Text style={[styles.templateName, { color: colors.foreground }]}>{template.title}</Text>
+                  <Text style={[styles.templateDescription, { color: colors.mutedForeground }]}>{template.description}</Text>
                   {isLocked && (
-                    <View style={styles.lockContainer}>
-                      <Feather name="lock" size={16} color={colors.textMuted} />
+                    <View style={styles.lockContainer || { position: 'absolute', right: 10, top: 10 }}>
+                      <Feather name="lock" size={16} color={colors.mutedForeground} />
                     </View>
                   )}
                 </Pressable>
@@ -1344,19 +1344,14 @@ setIsGenerating(false);
             </TouchableOpacity>
           )}
 
-                  </View>
-                  <Text style={[styles.templateName, { color: colors.foreground }]}>{template.title}</Text>
-                  <Text style={[styles.templateDescription, { color: colors.mutedForeground }]}>{template.description}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
           {actionStatus ? (
             <View style={[styles.actionStatus, { backgroundColor: colors.accent }]}>
               <Feather name="info" size={14} color={colors.primary} />
               <Text style={[styles.actionStatusText, { color: colors.accentForeground }]}>{actionStatus}</Text>
             </View>
           ) : null}
+        </View>
+
         </View>
 
         {/* ENTERPRISE OPERATIONS WORKSPACE */}
