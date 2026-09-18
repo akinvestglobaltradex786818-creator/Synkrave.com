@@ -819,9 +819,9 @@ export default function HomeScreen() {
   };
 
   const handleBugFix = async () => {
-    if (!generatedCode) {
-      setActionStatus("Generate an app before asking the Schema Refiner
- to repair it.");
+  if (!generatedCode) {
+    setActionStatus("Generate a blueprint before asking the Schema Refiner to repair it.");
+
       return;
     }
     setIsChatSending(true);
