@@ -1443,7 +1443,8 @@ setIsGenerating(false);
               </View>
               <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Your Blueprint JSON layout will appear here</Text>
               <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                Start with a prompt above to generate your first screen.
+                Start with a prompt above to generate your system architecture schema.
+
               </Text>
             </View>
           )}
