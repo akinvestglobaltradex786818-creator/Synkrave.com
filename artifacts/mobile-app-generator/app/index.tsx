@@ -1394,7 +1394,7 @@ setIsGenerating(false);
             <Feather name="check-circle" size={15} color={colors.primary} />
             <View>
               <Text style={[styles.testerTitle, { color: colors.foreground }]}>AI One-Click Tester</Text>
-              <Text style={[styles.testerDescription, { color: colors.mutedForeground }]}>Test buttons inside the live simulator</Text>
+              <Text style={[styles.testerDescription, { color: colors.mutedForeground }]}>Run full diagnostics on the generated JSON structure</Text>
             </View>
           </View>
           <Pressable
