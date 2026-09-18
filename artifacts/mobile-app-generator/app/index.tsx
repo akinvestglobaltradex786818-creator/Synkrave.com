@@ -1254,32 +1254,35 @@ setIsGenerating(false);
             </View>
           </View>
           <View style={styles.templateGrid}>
-             {/* SECTION 1: WEBSITES */}
-          <Text style={[styles.templateTitle || styles.sectionTitle, { color: colors.foreground, marginTop: 15, fontSize: 18, fontWeight: 'bold' }]}>
+                      {/* SECTION 1: WEBSITES */}
+          <Text style={{ color: colors.foreground, marginTop: 20, fontSize: 18, fontWeight: 'bold', paddingHorizontal: 10 }}>
             Website Blueprints
           </Text>
-          <View style={styles.templateGrid}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', padding: 10 }}>
             {displayedWebsites.map((template) => {
               const isLocked = template.locked && !isAuthenticated;
               return (
                 <Pressable
                   key={template.id}
                   testID={`template-${template.id}`}
-                  accessibilityRole="button"
-                  accessibilityLabel={isLocked ? `${template.title} is locked` : template.title}
                   onPress={() => handleTemplateSelect(template)}
-                  style={({ pressed }) => [
-                    styles.templateCard,
-                    { opacity: pressed ? 0.7 : 1 }
-                  ]}
+                  style={({ pressed }) => ({
+                    width: '48%',
+                    backgroundColor: colors.card || '#1e1e1e',
+                    padding: 15,
+                    borderRadius: 12,
+                    marginBottom: 15,
+                    opacity: pressed ? 0.7 : 1,
+                    position: 'relative'
+                  })}
                 >
-                  <View style={styles.templateIconContainer || styles.iconContainer}>
+                  <View style={{ marginBottom: 10 }}>
                     <Feather name={template.icon} size={24} color={colors.primary} />
                   </View>
-                  <Text style={[styles.templateName, { color: colors.foreground }]}>{template.title}</Text>
-                  <Text style={[styles.templateDescription, { color: colors.mutedForeground }]}>{template.description}</Text>
+                  <Text style={{ color: colors.foreground, fontSize: 14, fontWeight: 'bold' }}>{template.title}</Text>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 4 }}>{template.description}</Text>
                   {isLocked && (
-                    <View style={styles.lockContainer || { position: 'absolute', right: 10, top: 10 }}>
+                    <View style={{ position: 'absolute', right: 10, top: 10 }}>
                       <Feather name="lock" size={16} color={colors.mutedForeground} />
                     </View>
                   )}
@@ -1291,7 +1294,7 @@ setIsGenerating(false);
           {websiteTemplates.length > 4 && (
             <TouchableOpacity 
               onPress={() => setShowAllWebsites(!showAllWebsites)}
-              style={{ marginTop: 10, marginBottom: 20, padding: 12, backgroundColor: colors.primary, borderRadius: 8, alignItems: 'center' }}
+              style={{ marginTop: 5, marginBottom: 25, marginHorizontal: 10, padding: 12, backgroundColor: colors.primary, borderRadius: 8, alignItems: 'center' }}
             >
               <Text style={{ color: '#fff', fontWeight: 'bold' }}>
                 {showAllWebsites ? "Show Less" : "View All Templates"}
@@ -1300,31 +1303,34 @@ setIsGenerating(false);
           )}
 
           {/* SECTION 2: AI AGENTS */}
-          <Text style={[styles.templateTitle || styles.sectionTitle, { color: colors.foreground, marginTop: 25, fontSize: 18, fontWeight: 'bold' }]}>
+          <Text style={{ color: colors.foreground, marginTop: 15, fontSize: 18, fontWeight: 'bold', paddingHorizontal: 10 }}>
             AI Agent Blueprints
           </Text>
-          <View style={styles.templateGrid}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', padding: 10 }}>
             {displayedAgents.map((template) => {
               const isLocked = template.locked && !isAuthenticated;
               return (
                 <Pressable
                   key={template.id}
                   testID={`template-${template.id}`}
-                  accessibilityRole="button"
-                  accessibilityLabel={isLocked ? `${template.title} is locked` : template.title}
                   onPress={() => handleTemplateSelect(template)}
-                  style={({ pressed }) => [
-                    styles.templateCard,
-                    { opacity: pressed ? 0.7 : 1 }
-                  ]}
+                  style={({ pressed }) => ({
+                    width: '48%',
+                    backgroundColor: colors.card || '#1e1e1e',
+                    padding: 15,
+                    borderRadius: 12,
+                    marginBottom: 15,
+                    opacity: pressed ? 0.7 : 1,
+                    position: 'relative'
+                  })}
                 >
-                  <View style={styles.templateIconContainer || styles.iconContainer}>
+                  <View style={{ marginBottom: 10 }}>
                     <Feather name={template.icon} size={24} color={colors.primary} />
                   </View>
-                  <Text style={[styles.templateName, { color: colors.foreground }]}>{template.title}</Text>
-                  <Text style={[styles.templateDescription, { color: colors.mutedForeground }]}>{template.description}</Text>
+                  <Text style={{ color: colors.foreground, fontSize: 14, fontWeight: 'bold' }}>{template.title}</Text>
+                  <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 4 }}>{template.description}</Text>
                   {isLocked && (
-                    <View style={styles.lockContainer || { position: 'absolute', right: 10, top: 10 }}>
+                    <View style={{ position: 'absolute', right: 10, top: 10 }}>
                       <Feather name="lock" size={16} color={colors.mutedForeground} />
                     </View>
                   )}
@@ -1336,7 +1342,7 @@ setIsGenerating(false);
           {agentTemplates.length > 4 && (
             <TouchableOpacity 
               onPress={() => setShowAllAgents(!showAllAgents)}
-              style={{ marginTop: 10, marginBottom: 20, padding: 12, backgroundColor: colors.primary, borderRadius: 8, alignItems: 'center' }}
+              style={{ marginTop: 5, marginBottom: 25, marginHorizontal: 10, padding: 12, backgroundColor: colors.primary, borderRadius: 8, alignItems: 'center' }}
             >
               <Text style={{ color: '#fff', fontWeight: 'bold' }}>
                 {showAllAgents ? "Show Less" : "View All Templates"}
@@ -1345,12 +1351,13 @@ setIsGenerating(false);
           )}
 
           {actionStatus ? (
-            <View style={[styles.actionStatus, { backgroundColor: colors.accent }]}>
-              <Feather name="info" size={14} color={colors.primary} />
-              <Text style={[styles.actionStatusText, { color: colors.accentForeground }]}>{actionStatus}</Text>
+            <View style={{ backgroundColor: colors.accent, padding: 10, borderRadius: 8, flexDirection: 'row', alignItems: 'center', margin: 10 }}>
+              <Feather name="info" size={14} color={colors.primary} style={{ marginRight: 6 }} />
+              <Text style={{ color: colors.accentForeground, fontSize: 12 }}>{actionStatus}</Text>
             </View>
           ) : null}
         </View>
+
 
         </View>
 
