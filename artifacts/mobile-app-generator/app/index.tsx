@@ -1441,7 +1441,7 @@ setIsGenerating(false);
               <View style={[styles.outputIcon, { backgroundColor: colors.accent }]}>
                 <Feather name="layers" size={20} color={colors.primary} />
               </View>
-              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Your app will appear here</Text>
+              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Your Blueprint JSON layout will appear here</Text>
               <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
                 Start with a prompt above to generate your first screen.
               </Text>
