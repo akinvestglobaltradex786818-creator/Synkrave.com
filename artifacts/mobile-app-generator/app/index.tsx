@@ -1254,7 +1254,7 @@ setIsGenerating(false);
             </View>
           </View>
           <View style={styles.templateGrid}>
-   }          {/* SECTION 1: WEBSITES */}
+             {/* SECTION 1: WEBSITES */}
           <Text style={[styles.templateTitle || styles.sectionTitle, { color: colors.foreground, marginTop: 15, fontSize: 18, fontWeight: 'bold' }]}>
             Website Blueprints
           </Text>
