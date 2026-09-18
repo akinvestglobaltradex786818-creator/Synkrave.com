@@ -820,7 +820,8 @@ export default function HomeScreen() {
 
   const handleBugFix = async () => {
     if (!generatedCode) {
-      setActionStatus("Generate an app before asking the AI Bug Fixer to repair it.");
+      setActionStatus("Generate an app before asking the Schema Refiner
+ to repair it.");
       return;
     }
     setIsChatSending(true);
