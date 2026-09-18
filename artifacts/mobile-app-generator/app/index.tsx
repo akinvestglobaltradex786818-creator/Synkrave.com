@@ -193,7 +193,7 @@ const starterPrompts = [
 
 const templateCatalog: TemplateDefinition[] = [
   // ==========================================
-  // WEBSITE TEMPLATES (پہلی کیٹیگری - ٹاپ 4 سامنے رہیں گے)
+  // WEBSITE TEMPLATES
   // ==========================================
   {
     id: "grocery",
@@ -1356,9 +1356,6 @@ setIsGenerating(false);
               <Text style={{ color: colors.accentForeground, fontSize: 12 }}>{actionStatus}</Text>
             </View>
           ) : null}
-        </View>
-
-
         </View>
 
         {/* ENTERPRISE OPERATIONS WORKSPACE */}
