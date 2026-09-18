@@ -1360,7 +1360,8 @@ setIsGenerating(false);
             <Pressable
               testID="live-preview-toggle"
               accessibilityRole="button"
-              accessibilityLabel={isLivePreview ? "Show generated code" : "View live app"}
+              accessibilityLabel={isLivePreview ? "Show generated code" : "View Blueprint Schema
+"}
               disabled={!generatedCode}
               onPress={() => {
                 setIsLivePreview((current) => !current);
