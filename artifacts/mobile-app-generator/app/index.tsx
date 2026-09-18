@@ -1253,7 +1253,8 @@ setIsGenerating(false);
             </View>
             <View style={[styles.templateCount, { backgroundColor: colors.muted }]}>
               <Text style={[styles.templateCountText, { color: colors.mutedForeground }]}>
-                {isAuthenticated ? "12 unlocked" : "3 free · 9 locked"}
+                {isAuthenticated ? "All Unlocked" : "Upgrade to Unlock Premium Schemas"}
+
               </Text>
             </View>
           </View>
