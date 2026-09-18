@@ -1541,7 +1541,8 @@ setIsGenerating(false);
             value={chatMessage}
             onChangeText={setChatMessage}
             multiline
-            placeholder="Ask for a change, such as: make the hero warmer..."
+            placeholder="Ask for a change, such as: add a status column to users table..."
+
             placeholderTextColor={colors.mutedForeground}
             textAlignVertical="top"
             style={[styles.chatInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
