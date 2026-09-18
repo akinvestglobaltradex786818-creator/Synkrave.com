@@ -597,6 +597,15 @@ const helpArticles = [
 
 export default function HomeScreen() {
   const colors = useColors();
+    const [showAllWebsites, setShowAllWebsites] = useState(false);
+  const [showAllAgents, setShowAllAgents] = useState(false);
+
+  const websiteTemplates = templateCatalog.filter(t => t.category === 'website');
+  const agentTemplates = templateCatalog.filter(t => t.category === 'agent');
+
+  const displayedWebsites = showAllWebsites ? websiteTemplates : websiteTemplates.slice(0, 4);
+  const displayedAgents = showAllAgents ? agentTemplates : agentTemplates.slice(0, 4);
+
   const insets = useSafeAreaInsets();
   const [prompt, setPrompt] = useState<string>("");
   const [isFocused, setIsFocused] = useState<boolean>(false);
