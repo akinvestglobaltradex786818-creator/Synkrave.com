@@ -1360,10 +1360,10 @@ setIsGenerating(false);
           </View>
           <View style={styles.outputActions}>
             <Pressable
-              testID="live-preview-toggle"
+                            testID="live-preview-toggle"
               accessibilityRole="button"
-              accessibilityLabel={isLivePreview ? "Show generated code" : "View Blueprint Schema
-"}
+              accessibilityLabel={isLivePreview ? "Show blueprint JSON" : "View Blueprint Schema"}
+
               disabled={!generatedCode}
               onPress={() => {
                 setIsLivePreview((current) => !current);
