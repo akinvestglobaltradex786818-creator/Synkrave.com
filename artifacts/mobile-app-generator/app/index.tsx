@@ -183,7 +183,7 @@ type TemplateDefinition = {
   prompt: string;
   icon: keyof typeof Feather.glyphMap;
   locked: boolean;
-  category: 'website' | 'agent'; // نئی کیٹیگری شامل کی ہے
+  category: 'website' | 'agent';
 };
 
 const starterPrompts = [
@@ -192,16 +192,13 @@ const starterPrompts = [
 ];
 
 const templateCatalog: TemplateDefinition[] = [
-  // ==========================================
-  // WEBSITE TEMPLATES
-  // ==========================================
   {
     id: "grocery",
     title: "Simple Grocery Store",
     description: "Fresh products and local delivery",
     prompt: "A simple grocery store website with products and local delivery CTA",
     icon: "shopping-bag",
-    locked: false, // یہ فری رہے گا
+    locked: false,
     category: "website",
   },
   {
@@ -238,7 +235,7 @@ const templateCatalog: TemplateDefinition[] = [
     prompt: "An e-commerce database schema for products, orders, customers, payments, and delivery",
     icon: "shopping-bag",
     locked: true,
-    category: "website", // یہ اور نیچے والے باقی 'More' بٹن کے اندر چھپ جائیں گے
+    category: "website",
   },
   {
     id: "ecommerce-store",
@@ -258,10 +255,6 @@ const templateCatalog: TemplateDefinition[] = [
     locked: true,
     category: "website",
   },
-
-  // ==========================================
-  // AI AGENT TEMPLATES (دوسری کیٹیگری - ٹاپ 4 سامنے رہیں گے)
-  // ==========================================
   {
     id: "barber",
     title: "Service Booking DB Schema",
@@ -590,7 +583,7 @@ const helpArticles = [
 
 export default function HomeScreen() {
   const colors = useColors();
-    const [showAllWebsites, setShowAllWebsites] = useState(false);
+  const [showAllWebsites, setShowAllWebsites] = useState(false);
   const [showAllAgents, setShowAllAgents] = useState(false);
 
   const websiteTemplates = templateCatalog.filter(t => t.category === 'website');
@@ -654,12 +647,6 @@ export default function HomeScreen() {
     void AsyncStorage.setItem("synkrave-ad-controls", JSON.stringify(adControls));
   }, [adControls]);
 
-  // Ask for location permission and use the device's actual GPS position
-  // (reverse-geocoded to a country) to pick a sensible starting language —
-  // the same pattern large apps use. If the person declines the permission,
-  // or geocoding fails for any reason, this falls back to the device's own
-  // language setting instead of forcing a request retry.
-  
   const filteredLanguages = useMemo(() => {
     const query = languageSearch.trim().toLowerCase();
     if (!query) return worldLanguages;
@@ -793,16 +780,14 @@ export default function HomeScreen() {
     }
     void Linking.openURL(livePreviewUrl);
   };
-
   const handleTester = () => {
     if (!generatedCode) {
       setActionStatus("Generate an app before running the AI One-Click Tester.");
       return;
     }
     setIsLivePreview(true);
-        setIsTesterRunning(true);
-  setActionStatus("Schema Blueprint Validator is running inside the interactive WebView.");
-
+    setIsTesterRunning(true);
+    setActionStatus("Schema Blueprint Validator is running inside the interactive WebView.");
     setTimeout(() => {
       setIsTesterRunning(false);
       setActionStatus("AI One-Click Tester completed. Interactive controls are ready.");
@@ -828,9 +813,8 @@ export default function HomeScreen() {
   };
 
   const handleBugFix = async () => {
-  if (!generatedCode) {
-    setActionStatus("Generate a blueprint before asking the Schema Refiner to repair it.");
-
+    if (!generatedCode) {
+      setActionStatus("Generate a blueprint before asking the Schema Refiner to repair it.");
       return;
     }
     setIsChatSending(true);
@@ -964,7 +948,7 @@ export default function HomeScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
-    const handleGenerate = async () => {
+  const handleGenerate = async () => {
     Keyboard.dismiss();
     if (!prompt.trim()) {
       setError("Add a short description to get started.");
@@ -1000,22 +984,20 @@ export default function HomeScreen() {
         })
       });
 
+      if (!response.ok) {
+        throw new Error("Server error");
+      }
 
-  if (!response.ok) {
-    throw new Error("Server error");
-  }
+      const data = await response.json();
 
-  const data = await response.json();
+      setGeneratedCode(data.html || "");
+      setGeneratedFiles(data);
+      setIsLivePreview(true);
+    } catch (error) {
+      setError("Server se response nahi aya");
+    }
 
-  setGeneratedCode(data.html || "");
-  setGeneratedFiles(data);
-  setIsLivePreview(true);
-
-} catch (error) {
-  setError("Server se response nahi aya");
-}
-
-setIsGenerating(false);
+    setIsGenerating(false);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
@@ -1095,12 +1077,10 @@ setIsGenerating(false);
         </View>
 
         <View style={styles.hero}>
-         <Text style={[styles.eyebrow, { color: colors.primary }]}>PROMPT TO BLUEPRINT</Text>
-
+          <Text style={[styles.eyebrow, { color: colors.primary }]}>PROMPT TO BLUEPRINT</Text>
           <Text style={[styles.title, { color: colors.foreground }]}>
             Turn ideas{"\n"}
-<Text style={{ color: colors.primary }}>into blueprints.</Text>
-
+            <Text style={{ color: colors.primary }}>into blueprints.</Text>
           </Text>
           <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
             Describe what you want to build. We&apos;ll shape the first version for you.
@@ -1126,8 +1106,7 @@ setIsGenerating(false);
               }}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
-             placeholder="Describe your database system or schema..."
-
+              placeholder="Describe your database system or schema..."
               placeholderTextColor={colors.mutedForeground}
               multiline
               textAlignVertical="top"
@@ -1146,8 +1125,7 @@ setIsGenerating(false);
                   { backgroundColor: isListening ? colors.primary : colors.secondary, opacity: pressed ? 0.72 : 1 },
                 ]}
               >
-                <Feather name={isListening ? "mic-off" : "mic"}
- size={18} color={isListening ? colors.primaryForeground : colors.foreground} />
+                <Feather name={isListening ? "mic-off" : "mic"} size={18} color={isListening ? colors.primaryForeground : colors.foreground} />
               </Pressable>
             </View>
           </View>
@@ -1219,7 +1197,6 @@ setIsGenerating(false);
           testID="generate-button"
           accessibilityRole="button"
           accessibilityLabel="Generate blueprint"
-
           onPress={handleGenerate}
           disabled={isGenerating}
           style={({ pressed }) => [
@@ -1232,9 +1209,8 @@ setIsGenerating(false);
           ) : (
             <>
               <Text style={[styles.generateText, { color: colors.primaryForeground }]}>
-  Generate Blueprint
-</Text>
-
+                Generate Blueprint
+              </Text>
               <Feather name="arrow-up-right" size={20} color={colors.primaryForeground} />
             </>
           )}
@@ -1249,12 +1225,10 @@ setIsGenerating(false);
             <View style={[styles.templateCount, { backgroundColor: colors.muted }]}>
               <Text style={[styles.templateCountText, { color: colors.mutedForeground }]}>
                 {isAuthenticated ? "All Unlocked" : "Upgrade to Unlock Premium Schemas"}
-
               </Text>
             </View>
           </View>
-          <View style={styles.templateGrid}>
-                      {/* SECTION 1: WEBSITES */}
+
           <Text style={{ color: colors.foreground, marginTop: 20, fontSize: 18, fontWeight: 'bold', paddingHorizontal: 10 }}>
             Website Blueprints
           </Text>
@@ -1265,7 +1239,7 @@ setIsGenerating(false);
                 <Pressable
                   key={template.id}
                   testID={`template-${template.id}`}
-                  onPress={() => handleTemplateSelect(template)}
+                  onPress={() => handleTemplatePress(template)}
                   style={({ pressed }) => ({
                     width: '48%',
                     backgroundColor: colors.card || '#1e1e1e',
@@ -1273,7 +1247,7 @@ setIsGenerating(false);
                     borderRadius: 12,
                     marginBottom: 15,
                     opacity: pressed ? 0.7 : 1,
-                    position: 'relative'
+                    position: 'relative',
                   })}
                 >
                   <View style={{ marginBottom: 10 }}>
@@ -1281,28 +1255,27 @@ setIsGenerating(false);
                   </View>
                   <Text style={{ color: colors.foreground, fontSize: 14, fontWeight: 'bold' }}>{template.title}</Text>
                   <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 4 }}>{template.description}</Text>
-                  {isLocked && (
+                  {isLocked ? (
                     <View style={{ position: 'absolute', right: 10, top: 10 }}>
                       <Feather name="lock" size={16} color={colors.mutedForeground} />
                     </View>
-                  )}
+                  ) : null}
                 </Pressable>
               );
             })}
           </View>
 
-          {websiteTemplates.length > 4 && (
-            <TouchableOpacity 
+          {websiteTemplates.length > 4 ? (
+            <Pressable
               onPress={() => setShowAllWebsites(!showAllWebsites)}
               style={{ marginTop: 5, marginBottom: 25, marginHorizontal: 10, padding: 12, backgroundColor: colors.primary, borderRadius: 8, alignItems: 'center' }}
             >
               <Text style={{ color: '#fff', fontWeight: 'bold' }}>
                 {showAllWebsites ? "Show Less" : "View All Templates"}
               </Text>
-            </TouchableOpacity>
-          )}
+            </Pressable>
+          ) : null}
 
-          {/* SECTION 2: AI AGENTS */}
           <Text style={{ color: colors.foreground, marginTop: 15, fontSize: 18, fontWeight: 'bold', paddingHorizontal: 10 }}>
             AI Agent Blueprints
           </Text>
@@ -1313,7 +1286,7 @@ setIsGenerating(false);
                 <Pressable
                   key={template.id}
                   testID={`template-${template.id}`}
-                  onPress={() => handleTemplateSelect(template)}
+                  onPress={() => handleTemplatePress(template)}
                   style={({ pressed }) => ({
                     width: '48%',
                     backgroundColor: colors.card || '#1e1e1e',
@@ -1321,7 +1294,7 @@ setIsGenerating(false);
                     borderRadius: 12,
                     marginBottom: 15,
                     opacity: pressed ? 0.7 : 1,
-                    position: 'relative'
+                    position: 'relative',
                   })}
                 >
                   <View style={{ marginBottom: 10 }}>
@@ -1329,26 +1302,26 @@ setIsGenerating(false);
                   </View>
                   <Text style={{ color: colors.foreground, fontSize: 14, fontWeight: 'bold' }}>{template.title}</Text>
                   <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 4 }}>{template.description}</Text>
-                  {isLocked && (
+                  {isLocked ? (
                     <View style={{ position: 'absolute', right: 10, top: 10 }}>
                       <Feather name="lock" size={16} color={colors.mutedForeground} />
                     </View>
-                  )}
+                  ) : null}
                 </Pressable>
               );
             })}
           </View>
 
-          {agentTemplates.length > 4 && (
-            <TouchableOpacity 
+          {agentTemplates.length > 4 ? (
+            <Pressable
               onPress={() => setShowAllAgents(!showAllAgents)}
               style={{ marginTop: 5, marginBottom: 25, marginHorizontal: 10, padding: 12, backgroundColor: colors.primary, borderRadius: 8, alignItems: 'center' }}
             >
               <Text style={{ color: '#fff', fontWeight: 'bold' }}>
                 {showAllAgents ? "Show Less" : "View All Templates"}
               </Text>
-            </TouchableOpacity>
-          )}
+            </Pressable>
+          ) : null}
 
           {actionStatus ? (
             <View style={{ backgroundColor: colors.accent, padding: 10, borderRadius: 8, flexDirection: 'row', alignItems: 'center', margin: 10 }}>
@@ -1358,7 +1331,6 @@ setIsGenerating(false);
           ) : null}
         </View>
 
-        {/* ENTERPRISE OPERATIONS WORKSPACE */}
         <View style={styles.templatesSection}>
           <View style={styles.templatesHeader}>
             <View>
@@ -1435,10 +1407,9 @@ setIsGenerating(false);
           </View>
           <View style={styles.outputActions}>
             <Pressable
-                            testID="live-preview-toggle"
+              testID="live-preview-toggle"
               accessibilityRole="button"
               accessibilityLabel={isLivePreview ? "Show blueprint JSON" : "View Blueprint Schema"}
-
               disabled={!generatedCode}
               onPress={() => {
                 setIsLivePreview((current) => !current);
@@ -1520,7 +1491,6 @@ setIsGenerating(false);
               <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Your Blueprint JSON layout will appear here</Text>
               <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
                 Start with a prompt above to generate your system architecture schema.
-
               </Text>
             </View>
           )}
@@ -1549,7 +1519,7 @@ setIsGenerating(false);
             </View>
           </View>
         ) : null}
-        
+
         <View style={styles.businessActions}>
           <Pressable
             testID="download-button"
@@ -1618,7 +1588,6 @@ setIsGenerating(false);
             onChangeText={setChatMessage}
             multiline
             placeholder="Ask for a change, such as: add a status column to users table..."
-
             placeholderTextColor={colors.mutedForeground}
             textAlignVertical="top"
             style={[styles.chatInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
@@ -1631,8 +1600,7 @@ setIsGenerating(false);
               onPress={handleChatVoicePress}
               style={({ pressed }) => [styles.chatIconButton, { backgroundColor: colors.secondary, opacity: pressed ? 0.72 : 1 }]}
             >
-              <Feather name={isListening && listeningTarget === "chat" ? "mic-off" : "mic"}
- size={16} color={colors.secondaryForeground} />
+              <Feather name={isListening && listeningTarget === "chat" ? "mic-off" : "mic"} size={16} color={colors.secondaryForeground} />
             </Pressable>
             <Pressable
               testID="bug-fix-button"
@@ -1671,7 +1639,6 @@ setIsGenerating(false);
           <Text style={[styles.githubButtonText, { color: colors.secondaryForeground }]}>Export to GitHub</Text>
         </Pressable>
 
-        {/* FOOTER: brand domain, support contact, backend status, honest "secured" badge */}
         <View style={[styles.brandFooter, { borderColor: colors.border }]}>
           <Pressable onPress={() => Linking.openURL(BRAND_DOMAIN)} style={styles.footerRow}>
             <Feather name="link" size={13} color={colors.primary} />
@@ -1705,7 +1672,6 @@ setIsGenerating(false);
         </View>
       </ScrollView>
 
-      {/* LANGUAGE PICKER MODAL */}
       <Modal visible={languagePickerVisible} transparent animationType="fade" onRequestClose={() => setLanguagePickerVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.languageModalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -1745,7 +1711,6 @@ setIsGenerating(false);
         </View>
       </Modal>
 
-      {/* HELP CENTER MODAL */}
       <Modal visible={helpVisible} transparent animationType="slide" onRequestClose={() => setHelpVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.adminPanelCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -2167,4 +2132,3 @@ const styles = StyleSheet.create({
   footer: { alignItems: "center", flexDirection: "row", gap: 7, justifyContent: "center", marginTop: 23 },
   footerText: { fontFamily: "Inter_400Regular", fontSize: 11 },
 });
-
