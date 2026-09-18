@@ -228,17 +228,6 @@ const templateCatalog: TemplateDefinition[] = [
     icon: "calendar",
     locked: true,
   },
-
-  {
-    id: "grocery",
-    title: "Simple Grocery Store",
-    description: "Fresh products and local delivery",
-    prompt:
-      "A simple grocery store website with products and local delivery CTA",
-    icon: "shopping-bag",
-    locked: false,
-  },
- 
   {
     id: "financial",
     title: "Financial analytics schema",
@@ -271,14 +260,6 @@ const templateCatalog: TemplateDefinition[] = [
     prompt:
       "An educational LMS portal with courses, lessons, and learner progress",
     icon: "book-open",
-    locked: true,
-  },
-    {
-    id: "startup",
-    title: "SaaS Infrastructure Blueprint",
-    description: "Cloud architecture, scaling, and database clusters",
-    prompt: "A comprehensive SaaS infrastructure database schema for users, multi-tenant scaling, and cloud clusters",
-    icon: "layers",
     locked: true,
   },
   {
