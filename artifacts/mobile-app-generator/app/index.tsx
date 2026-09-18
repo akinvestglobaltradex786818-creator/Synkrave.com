@@ -175,14 +175,7 @@ const countryToLanguage: Record<string, string> = {
   IS: "is-IS", MT: "mt-MT", LU: "lb-LU", AL: "sq-AL", MK: "mk-MK", BY: "be-BY",
 };
 
-type TemplateDefinition = {
-  id: string;
-  title: string;
-  description: string;
-  prompt: string;
-  icon: keyof typeof Feather.glyphMap;
-  locked: boolean;
-};
+
 type TemplateDefinition = {
   id: string;
   title: string;
