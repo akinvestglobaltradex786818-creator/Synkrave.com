@@ -183,6 +183,15 @@ type TemplateDefinition = {
   icon: keyof typeof Feather.glyphMap;
   locked: boolean;
 };
+type TemplateDefinition = {
+  id: string;
+  title: string;
+  description: string;
+  prompt: string;
+  icon: keyof typeof Feather.glyphMap;
+  locked: boolean;
+  category: 'website' | 'agent'; // نئی کیٹیگری شامل کی ہے
+};
 
 const starterPrompts = [
   "User habits & streaks schema",
@@ -190,93 +199,17 @@ const starterPrompts = [
 ];
 
 const templateCatalog: TemplateDefinition[] = [
-
-  
+  // ==========================================
+  // WEBSITE TEMPLATES (پہلی کیٹیگری - ٹاپ 4 سامنے رہیں گے)
+  // ==========================================
   {
     id: "grocery",
     title: "Simple Grocery Store",
     description: "Fresh products and local delivery",
-    prompt:
-      "A simple grocery store website with products and local delivery CTA",
+    prompt: "A simple grocery store website with products and local delivery CTA",
     icon: "shopping-bag",
-    locked: false,
-  },
-  {
-    id: "grocery",
-    title: "E-commerce Core Schema",
-    description: "Products, orders, and delivery models",
-    prompt:
-      "An e-commerce database schema for products, orders, customers, payments, and delivery",
-    icon: "shopping-bag",
-    locked: true,
-  },
-  {
-    id: "tailor",
-    title: "Simple Inventory Schema",
-    description: "Services, products, and stock data",
-    prompt:
-      "A simple inventory database schema for services, products, stock levels, and inventory movements",
-    icon: "database",
-    locked: true,
-  },
-  {
-    id: "barber",
-    title: "Service Booking DB Schema",
-    description: "Cuts, hours, and appointments data",
-    prompt:
-      "A service booking database schema for services, business hours, customers, and appointments",
-    icon: "calendar",
-    locked: true,
-  },
-  {
-    id: "financial",
-    title: "Financial analytics schema",
-    description: "Revenue, cash flow, and performance KPIs",
-    prompt:
-      "A financial dashboard with revenue, cash flow, and performance KPIs",
-    icon: "bar-chart-2",
-    locked: true,
-  },
-  {
-    id: "ecommerce",
-    title: "E-commerce Store",
-    description: "Products, offers, and conversion",
-    prompt: "An e-commerce store with featured products and a shopping CTA",
-    icon: "shopping-bag",
-    locked: true,
-  },
-  {
-    id: "real-estate",
-    title: "Real Estate data Blueprint",
-    description: "Listings and property discovery",
-    prompt: "A real estate portal with property listings and search filters",
-    icon: "home",
-    locked: true,
-  },
-  {
-    id: "education",
-    title: "Educational LMS schema",
-    description: "Courses, lessons, and learner progress",
-    prompt:
-      "An educational LMS portal with courses, lessons, and learner progress",
-    icon: "book-open",
-    locked: true,
-  },
-  {
-    id: "secure-login",
-    title: "Auth & OAuth Identity Schema",
-    description: "User authentication, JWT, and OAuth tokens data",
-    prompt: "A secure authentication database schema for user logins, OAuth profiles, JWT sessions, and password resets",
-    icon: "lock",
-    locked: true,
-  },
-  {
-    id: "pricing",
-    title: "Subscription & Billing Model",
-    description: "Plans, billing tiers, and recurring invoices",
-    prompt: "A subscription billing database schema for service plans, invoices, transactions, and user tiers",
-    icon: "credit-card",
-    locked: true,
+    locked: false, // یہ فری رہے گا
+    category: "website",
   },
   {
     id: "corporate",
@@ -285,14 +218,7 @@ const templateCatalog: TemplateDefinition[] = [
     prompt: "A database schema for enterprise corporate structure, employee data, departments, and payroll systems",
     icon: "briefcase",
     locked: true,
-  },
-  {
-    id: "finance",
-    title: "Financial Analytics Schema",
-    description: "Ledgers, balance sheets, and transaction logs",
-    prompt: "A financial data schema for tracking business accounts, general ledgers, expenses, and transaction history",
-    icon: "pie-chart",
-    locked: true,
+    category: "website",
   },
   {
     id: "realestate",
@@ -301,6 +227,7 @@ const templateCatalog: TemplateDefinition[] = [
     prompt: "A database structure for property specifications, real estate listings, buyer/seller agents, and sales contracts",
     icon: "home",
     locked: true,
+    category: "website",
   },
   {
     id: "lms",
@@ -309,6 +236,83 @@ const templateCatalog: TemplateDefinition[] = [
     prompt: "An educational platform database schema for managing courses, student enrollments, lessons, and exam grading tracking",
     icon: "book-open",
     locked: true,
+    category: "website",
+  },
+  {
+    id: "grocery-core",
+    title: "E-commerce Core Schema",
+    description: "Products, orders, and delivery models",
+    prompt: "An e-commerce database schema for products, orders, customers, payments, and delivery",
+    icon: "shopping-bag",
+    locked: true,
+    category: "website", // یہ اور نیچے والے باقی 'More' بٹن کے اندر چھپ جائیں گے
+  },
+  {
+    id: "ecommerce-store",
+    title: "E-commerce Store",
+    description: "Products, offers, and conversion",
+    prompt: "An e-commerce store with featured products and a shopping CTA",
+    icon: "shopping-bag",
+    locked: true,
+    category: "website",
+  },
+  {
+    id: "tailor",
+    title: "Simple Inventory Schema",
+    description: "Services, products, and stock data",
+    prompt: "A simple inventory database schema for services, products, stock levels, and inventory movements",
+    icon: "database",
+    locked: true,
+    category: "website",
+  },
+
+  // ==========================================
+  // AI AGENT TEMPLATES (دوسری کیٹیگری - ٹاپ 4 سامنے رہیں گے)
+  // ==========================================
+  {
+    id: "barber",
+    title: "Service Booking DB Schema",
+    description: "Cuts, hours, and appointments data",
+    prompt: "A service booking database schema for services, business hours, customers, and appointments",
+    icon: "calendar",
+    locked: true,
+    category: "agent",
+  },
+  {
+    id: "financial",
+    title: "Financial analytics schema",
+    description: "Revenue, cash flow, and performance KPIs",
+    prompt: "A financial dashboard with revenue, cash flow, and performance KPIs",
+    icon: "bar-chart-2",
+    locked: true,
+    category: "agent",
+  },
+  {
+    id: "secure-login",
+    title: "Auth & OAuth Identity Schema",
+    description: "User authentication, JWT, and OAuth tokens data",
+    prompt: "A secure authentication database schema for user logins, OAuth profiles, JWT sessions, and password resets",
+    icon: "lock",
+    locked: true,
+    category: "agent",
+  },
+  {
+    id: "pricing",
+    title: "Subscription & Billing Model",
+    description: "Plans, billing tiers, and recurring invoices",
+    prompt: "A subscription billing database schema for service plans, invoices, transactions, and user tiers",
+    icon: "credit-card",
+    locked: true,
+    category: "agent",
+  },
+  {
+    id: "finance-ledgers",
+    title: "Financial Analytics Schema",
+    description: "Ledgers, balance sheets, and transaction logs",
+    prompt: "A financial data schema for tracking business accounts, general ledgers, expenses, and transaction history",
+    icon: "pie-chart",
+    locked: true,
+    category: "agent",
   },
   {
     id: "custom",
@@ -317,6 +321,7 @@ const templateCatalog: TemplateDefinition[] = [
     prompt: "A custom JSON and Zod-validated system blueprint based on my requirements",
     icon: "layers",
     locked: true,
+    category: "agent",
   },
   {
     id: "healthcare",
@@ -325,6 +330,7 @@ const templateCatalog: TemplateDefinition[] = [
     prompt: "A secure healthcare database schema for HIPAA-compliant patient, appointment, provider, and medical history models",
     icon: "activity",
     locked: true,
+    category: "agent",
   },
   {
     id: "fintech",
@@ -333,6 +339,7 @@ const templateCatalog: TemplateDefinition[] = [
     prompt: "A FinTech architecture blueprint for double-entry ledger transactions, account balances, crypto wallets, and security token data",
     icon: "credit-card",
     locked: true,
+    category: "agent",
   },
   {
     id: "logistics",
@@ -341,9 +348,9 @@ const templateCatalog: TemplateDefinition[] = [
     prompt: "A logistics and supply-chain database schema for shipments, warehouses, fleet status, routes, and delivery milestones",
     icon: "package",
     locked: true,
+    category: "agent",
   }
 ];
-
 
 type GeneratedFiles = { html: string; css: string; js: string };
 type SpeechTarget = "prompt" | "chat";
