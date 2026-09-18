@@ -1261,29 +1261,96 @@ setIsGenerating(false);
             </View>
           </View>
           <View style={styles.templateGrid}>
-            {templateCatalog.map((template) => {
+                     {/* SECTION 1: WEBSITES */}
+          <Text style={[styles.templateTitle, { color: colors.text, marginTop: 10, fontSize: 18, fontWeight: 'bold' }]}>
+            Website Blueprints
+          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: 10 }}>
+            {displayedWebsites.map((template) => {
               const isLocked = template.locked && !isAuthenticated;
               return (
                 <Pressable
                   key={template.id}
                   testID={`template-${template.id}`}
                   accessibilityRole="button"
-                  accessibilityLabel={isLocked ? `Unlock ${template.title}` : `Use ${template.title}`}
-                  onPress={() => handleTemplatePress(template)}
+                  accessibilityLabel={isLocked ? `${template.title} is locked` : template.title}
+                  onPress={() => handleTemplateSelect(template)}
                   style={({ pressed }) => [
                     styles.templateCard,
-                    { backgroundColor: colors.card, borderColor: isLocked ? colors.border : colors.accent, opacity: pressed ? 0.72 : 1 },
+                    { backgroundColor: colors.card, opacity: pressed ? 0.7 : 1 }
                   ]}
                 >
-                  <View style={styles.templateCardTop}>
-                    <View style={[styles.templateIcon, { backgroundColor: isLocked ? colors.muted : colors.accent }]}>
-                      <Feather name={template.icon} size={16} color={isLocked ? colors.mutedForeground : colors.primary} />
+                  <View style={styles.templateIconContainer}>
+                    <Feather name={template.icon} size={24} color={colors.primary} />
+                  </View>
+                  <Text style={[styles.templateCardTitle, { color: colors.text }]}>{template.title}</Text>
+                  <Text style={[styles.templateCardDesc, { color: colors.textMuted }]}>{template.description}</Text>
+                  {isLocked && (
+                    <View style={styles.lockContainer}>
+                      <Feather name="lock" size={16} color={colors.textMuted} />
                     </View>
-                    {isLocked ? (
-                      <Feather name="lock" size={14} color={colors.mutedForeground} />
-                    ) : (
-                      <Text style={[styles.freeLabel, { color: colors.primary }]}>{template.locked ? "PRO" : "FREE"}</Text>
-                    )}
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {websiteTemplates.length > 4 && (
+            <TouchableOpacity 
+              onPress={() => setShowAllWebsites(!showAllWebsites)}
+              style={{ marginTop: 10, marginBottom: 20, padding: 12, backgroundColor: colors.primary, borderRadius: 8, alignItems: 'center' }}
+            >
+              <Text style={{ color: '#fff', fontWeight: 'bold' }}>
+                {showAllWebsites ? "Show Less" : "View All Templates"}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {/* SECTION 2: AI AGENTS */}
+          <Text style={[styles.templateTitle, { color: colors.text, marginTop: 20, fontSize: 18, fontWeight: 'bold' }]}>
+            AI Agent Blueprints
+          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: 10 }}>
+            {displayedAgents.map((template) => {
+              const isLocked = template.locked && !isAuthenticated;
+              return (
+                <Pressable
+                  key={template.id}
+                  testID={`template-${template.id}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={isLocked ? `${template.title} is locked` : template.title}
+                  onPress={() => handleTemplateSelect(template)}
+                  style={({ pressed }) => [
+                    styles.templateCard,
+                    { backgroundColor: colors.card, opacity: pressed ? 0.7 : 1 }
+                  ]}
+                >
+                  <View style={styles.templateIconContainer}>
+                    <Feather name={template.icon} size={24} color={colors.primary} />
+                  </View>
+                  <Text style={[styles.templateCardTitle, { color: colors.text }]}>{template.title}</Text>
+                  <Text style={[styles.templateCardDesc, { color: colors.textMuted }]}>{template.description}</Text>
+                  {isLocked && (
+                    <View style={styles.lockContainer}>
+                      <Feather name="lock" size={16} color={colors.textMuted} />
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {agentTemplates.length > 4 && (
+            <TouchableOpacity 
+              onPress={() => setShowAllAgents(!showAllAgents)}
+              style={{ marginTop: 10, marginBottom: 20, padding: 12, backgroundColor: colors.primary, borderRadius: 8, alignItems: 'center' }}
+            >
+              <Text style={{ color: '#fff', fontWeight: 'bold' }}>
+                {showAllAgents ? "Show Less" : "View All Templates"}
+              </Text>
+            </TouchableOpacity>
+          )}
+
                   </View>
                   <Text style={[styles.templateName, { color: colors.foreground }]}>{template.title}</Text>
                   <Text style={[styles.templateDescription, { color: colors.mutedForeground }]}>{template.description}</Text>
