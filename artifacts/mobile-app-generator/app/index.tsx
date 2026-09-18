@@ -1497,7 +1497,7 @@ setIsGenerating(false);
             style={({ pressed }) => [styles.primaryAction, { backgroundColor: colors.primary, opacity: pressed ? 0.72 : 1 }]}
           >
             <Feather name="upload-cloud" size={16} color={colors.primaryForeground} />
-            <Text style={[styles.primaryActionText, { color: colors.primaryForeground }]}>Deploy (demo)</Text>
+            <Text style={[styles.primaryActionText, { color: colors.primaryForeground }]}>Validate Schema</Text>
           </Pressable>
         </View>
 
