@@ -792,7 +792,8 @@ export default function HomeScreen() {
     }
     setIsLivePreview(true);
     setIsTesterRunning(true);
-    setActionStatus("AI One-Click Tester is running inside the interactive WebView.");
+    setActionStatus("Schema Blueprint Validator
+ is running inside the interactive WebView.");
     setTimeout(() => {
       setIsTesterRunning(false);
       setActionStatus("AI One-Click Tester completed. Interactive controls are ready.");
