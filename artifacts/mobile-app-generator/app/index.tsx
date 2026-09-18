@@ -190,6 +190,17 @@ const starterPrompts = [
 ];
 
 const templateCatalog: TemplateDefinition[] = [
+
+  
+  {
+    id: "grocery",
+    title: "Simple Grocery Store",
+    description: "Fresh products and local delivery",
+    prompt:
+      "A simple grocery store website with products and local delivery CTA",
+    icon: "shopping-bag",
+    locked: false,
+  },
   {
     id: "grocery",
     title: "E-commerce Core Schema",
@@ -197,7 +208,7 @@ const templateCatalog: TemplateDefinition[] = [
     prompt:
       "An e-commerce database schema for products, orders, customers, payments, and delivery",
     icon: "shopping-bag",
-    locked: false,
+    locked: true,
   },
   {
     id: "tailor",
@@ -227,15 +238,7 @@ const templateCatalog: TemplateDefinition[] = [
     icon: "shopping-bag",
     locked: false,
   },
-  {
-    id: "corporate",
-    title: "Corporate Business schema",
-    description: "Enterprise services and trust signals",
-    prompt:
-      "A corporate business website with services, trust signals, and contact CTA",
-    icon: "briefcase",
-    locked: true,
-  },
+ 
   {
     id: "financial",
     title: "Financial analytics schema",
